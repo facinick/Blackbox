@@ -13,6 +13,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Token {
+  requestToken    String @id
+  accessToken     String?
+  refreshToken    String?
+}
+
 model Ledger {
   id             String @id
   tradingsymbol  String
