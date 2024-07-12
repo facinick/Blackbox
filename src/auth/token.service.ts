@@ -6,59 +6,55 @@ export class TokenService {
 
     private requestToken: string;
 
-    constructor(private readonly prismaService: PrismaService) { }
+    constructor(private readonly prismaService: PrismaService) {}
 
-    async saveAccessToken(token: string): Promise<void> {
-        await this.prismaService.token.upsert({
+    saveAccessToken = async (token: string): Promise<void> => {
+        await this.prismaService.token.update({
             where: { requestToken: this.requestToken },
-            update: { accessToken: token },
-            create: { accessToken: token, requestToken: this.requestToken, refreshToken: null },
+            data: { accessToken: token },
         });
     }
 
-    async saveRefreshToken(token: string): Promise<void> {
-        await this.prismaService.token.upsert({
+    saveRefreshToken = async (token: string): Promise<void> => {
+        await this.prismaService.token.update({
             where: { requestToken: this.requestToken },
-            update: { refreshToken: token },
-            create: { refreshToken: token, requestToken: this.requestToken, accessToken: null },
+            data: { refreshToken: token },
         });
     }
 
-    async saveRequestToken(token: string): Promise<void> {
-        await this.clearTokens()
+    saveRequestToken = async (token: string): Promise<void> => {
         this.requestToken = token;
-        await this.prismaService.token.create(
-            {
-                data: {
-                    requestToken: this.requestToken,
-                    accessToken: null,
-                    refreshToken: null
-                }
+        await this.prismaService.token.create({
+            data: {
+                requestToken: this.requestToken,
+                accessToken: null,
+                refreshToken: null
             }
-        );
+        });
     }
 
-    async getAccessToken(): Promise<string> {
+    getAccessToken = async (): Promise<string> => {
         const token = await this.prismaService.token.findUnique({
             where: { requestToken: this.requestToken },
         });
         return token?.accessToken || null;
     }
 
-    async getRefreshToken(): Promise<string> {
+    getRefreshToken = async (): Promise<string> => {
         const token = await this.prismaService.token.findUnique({
             where: { requestToken: this.requestToken },
         });
         return token?.refreshToken || null;
     }
 
-    async getRequestToken(): Promise<string> {
+    getRequestToken = async (): Promise<string> => {
         const token = await this.prismaService.token.findFirst();
         return token?.requestToken || null;
     }
 
-    async clearTokens(): Promise<void> {
-        await this.prismaService.token.deleteMany();
+    clearTokens = async (): Promise<void> => {
+        console.log(`clearing all tokens`)
+        await this.prismaService.token.deleteMany({});
         this.requestToken = null;
     }
 }

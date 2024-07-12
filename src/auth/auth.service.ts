@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiService } from 'src/api/api.service';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { TokenService } from './token.service';
 
 /*
@@ -32,52 +31,58 @@ export class AuthService {
     private readonly tokenService: TokenService,
   ) {}
 
-  public async loginWithExistingRequestToken() {
-
+  public loginWithExistingRequestToken = async () => {
     const requestToken = await this.tokenService.getRequestToken();
 
     if (requestToken) {
+      console.log(`request token found: ${requestToken}`)
       try {
-        await this.generateSession(requestToken);
+        const session = await this.generateSession(requestToken);
+        await this.setRequestToken(requestToken)
+        console.log(`session generated:`, session)
+        await this.saveSession(session)
+        console.log(`session saved`)
       } catch (error) {
+        console.log(`failed to login with existing token`, error)
         await this.tokenService.clearTokens();
-        throw new Error(`invallid request token in db`)
+        throw new Error(`invalid request token in db`)
       }
     } else {
+      console.log(`no request token found`)
       throw new Error(`no request token in db`)
     }
-
   }
 
-  public getLoginUrl() {
+  public getLoginUrl = () => {
     return this.apiService.getLoginURL();
   }
 
-  public async generateSession(requestToken: string) {
-    this.tokenService.saveRequestToken(requestToken)
-    const sessionData = await this.apiService.generateSession(
+  public generateSession = async (requestToken: string) => {
+    console.log(`generating new session`)
+    return this.apiService.generateSession(
       requestToken,
       this.configService.get("ZERODHA_API_SECRET"),
     );
-    this.tokenService.saveAccessToken(sessionData.refresh_token)
-    this.setRefreshToken(sessionData.refresh_token)
-    this.setAccessToken(sessionData.access_token);
-    this.initializeTicker(sessionData.access_token);
   }
 
-  public async logout() {
+  public saveSession = async (session: ZSession) => {
+    console.log(`saving session`)
+    await this.setAccessToken(session.access_token);
+    this.initializeTicker(session.access_token);
+  }
 
+  public logout = async () => {
+    console.log(`logging out`)
     const accessToken = await this.tokenService.getAccessToken()
-    const refreshToken = await this.tokenService.getRefreshToken()
+    // const refreshToken = await this.tokenService.getRefreshToken()
 
     await this.apiService.invalidateAccessToken(accessToken);
-    await this.apiService.invalidateRefreshToken(refreshToken);
+    // await this.apiService.invalidateRefreshToken(refreshToken);
 
-    this.tokenService.clearTokens()
+    await this.tokenService.clearTokens()
   }
 
-  public async refresh() {
-
+  public refresh = async () => {
     const refreshToken = await this.tokenService.getRefreshToken()
 
     const sessionData = await this.apiService.renewAccessToken(
@@ -87,17 +92,24 @@ export class AuthService {
     this.setAccessToken(sessionData.access_token);
   }
 
-  private async setAccessToken(accessToken: string) {
-    this.tokenService.saveAccessToken(accessToken)
+  private setAccessToken = async (accessToken: string) => {
+    console.log(`saving access token: ${accessToken}`)
+    await this.tokenService.saveAccessToken(accessToken)
     this.apiService.setAccessToken(accessToken);
   }
 
-
-  private async setRefreshToken(refreshToken: string) {
-    this.tokenService.saveRefreshToken(refreshToken)
+  public setRequestToken = async (requestToken: string) => {
+    console.log(`saving request token: ${requestToken}`)
+    await this.tokenService.saveRequestToken(requestToken)
   }
 
-  private initializeTicker(accessToken: string) {
+  private setRefreshToken = async (refreshToken: string) => {
+    console.log(`saving refresh token: ${refreshToken}`)
+    await this.tokenService.saveRefreshToken(refreshToken)
+  }
+
+  private initializeTicker = (accessToken: string) => {
+    console.log(`initializing ticker`)
     this.apiService.initializeTicker(accessToken);
   }
 }
