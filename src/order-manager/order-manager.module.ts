@@ -46,4 +46,4 @@ const orderHandlerFactory = {
   ],
   exports: [OrderManagerService],
 })
-export class LiveModule {}
+export class OrderManagerModule {}

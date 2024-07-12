@@ -1,11 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { ApiService } from 'src/api/api.service';
-import { withRetry, clamp } from 'src/api/utils';
 import { DataService } from 'src/data/data.service';
 import { OrderUpdate } from 'src/live/live.service';
 import { OrderRequest, PriceAdjustmentStrategy } from './order-manager.service';
 import { PRICE_ADJUSTMENT_STRATEGY } from './price-adjustment/price-adjustment.strategy';
+import { withRetry, clamp } from 'src/utils';
 
 /*
 emits:
