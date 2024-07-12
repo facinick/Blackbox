@@ -50,19 +50,19 @@ export class StrategyService {
     private readonly orderManagerService: OrderManagerService,
   ) {}
 
-  async initialize() {
+  initialize = async () => {
     this.portfolioService
       .getHoldings()
       .forEach(({ token }) => this.tokens.add(token));
     this.liveService.subscribe(Array.from(this.tokens));
   }
 
-  continue() {
+  continue = () => {
     return this.sExecStg === STAGE.SCAN;
   }
 
   @OnEvent('tick')
-  onPriceUpdate(tick: Tick): void {
+  private onPriceUpdate(tick: Tick): void {
     if (!this.tokens.has(tick.token)) {
       return;
     }
@@ -78,7 +78,7 @@ export class StrategyService {
     }
   }
 
-  shouldMakeDecision({ price, token }: Tick): boolean {
+  shouldMakeDecision = ({ price, token }: Tick): boolean => {
     const positions = this.portfolioService.getPositions();
 
     const equity = this.dataService.getEquityInfoFromToken(token);
@@ -89,7 +89,7 @@ export class StrategyService {
       (position) => position.name === equity.tradingsymbol,
     )[0];
 
-    // redundent check
+    // redundant check
     if (positions.length > 1) {
       console.log(
         `fatal error: cannot make a decision as there are multiple positions for the underlying: ${equity.tradingsymbol}`,
@@ -109,26 +109,26 @@ export class StrategyService {
     return false;
   }
 
-  private callSellPositionExists() {
+  private callSellPositionExists = () => {
     return this.executionContext.existingCallOptions.length > 0;
   }
 
-  private tooCloseToExpiry() {
+  private tooCloseToExpiry = () => {
     return this.dataService.hasNDaysToExpiry(
       this.executionContext.availableOTMCallOption.tradingsymbol,
       3,
     );
   }
 
-  private otmCallAvailable() {
+  private otmCallAvailable = () => {
     return this.executionContext.availableOTMCallOption;
   }
 
-  private isDesirableOTMCallAvailable() {
+  private isDesirableOTMCallAvailable = () => {
     return this.otmCallAvailable() && !this.tooCloseToExpiry();
   }
 
-  private getNetCash(strategyTag: OrderTag) {
+  private getNetCash = (strategyTag: OrderTag) => {
     const ledger = this.ledgerService.getRecordByTag(strategyTag);
 
     let pnl = 0;
@@ -146,7 +146,7 @@ export class StrategyService {
     return pnl;
   }
 
-  private getTarget(equityTradingsymbol: EquityTradingsymbol) {
+  private getTarget = (equityTradingsymbol: EquityTradingsymbol) => {
     const holdings =
       this.portfolioService.getHoldingsForEquity(equityTradingsymbol);
 
@@ -157,7 +157,7 @@ export class StrategyService {
     return holdings[0].quantity * this.executionContext.equityLTP;
   }
 
-  private updateStrategyContext({ token, price }: Tick) {
+  private updateStrategyContext = async ({ token, price }: Tick) => {
     const equityInfo = this.dataService.getEquityInfoFromToken(token);
     const month = DataService.getToday().month;
 
@@ -178,12 +178,12 @@ export class StrategyService {
       ),
       strategyTag: this.getStrategyTag(equityInfo.tradingsymbol),
       orders: [],
-      cash: this.getNetCash(this.getStrategyTag(equityInfo.tradingsymbol)),
+      cash: this.getNetCash(await this.getStrategyTag(equityInfo.tradingsymbol)),
       target: this.getTarget(equityInfo.tradingsymbol),
     };
   }
 
-  private isTriggerHit() {
+  private isTriggerHit = () => {
     const { strike } = DataService.parseDerivativeTradingSymbol(
       this.executionContext.existingCallOptions[0].tradingsymbol,
     );
@@ -197,7 +197,7 @@ export class StrategyService {
     return false;
   }
 
-  async excuteStrategy(tick: Tick) {
+  excuteStrategy = async (tick: Tick) => {
     this.updateStrategyContext(tick);
 
     if (this.callSellPositionExists()) {
@@ -223,7 +223,7 @@ export class StrategyService {
     this.sExecStg = STAGE.SCAN;
   }
 
-  private async resync(holdings, positions, balance) {
+  private resync = async (holdings, positions, balance) => {
     await this.portfolioService.syncPortfolio({
       syncBalance: balance,
       syncPositions: positions,
@@ -242,7 +242,7 @@ export class StrategyService {
     });
   }
 
-  private async sellNewOTMCall() {
+  private sellNewOTMCall = async () => {
     const ltpRecord = await this.apiService.getDerivativeLtp(
       this.executionContext.availableOTMCallOption.tradingsymbol,
     );
@@ -259,7 +259,7 @@ export class StrategyService {
     await this.orderManagerService.execute(this.executionContext.orders);
   }
 
-  private async sellEquity() {
+  private sellEquity = async () => {
     const ltpRecord = await this.apiService.getDerivativeLtp(
       this.executionContext.availableOTMCallOption.tradingsymbol,
     );
@@ -283,7 +283,7 @@ export class StrategyService {
     await this.orderManagerService.execute(this.executionContext.orders);
   }
 
-  private async exitCall() {
+  private exitCall = async () => {
     const ltpRecord = await this.apiService.getDerivativeLtp(
       this.executionContext.availableOTMCallOption.tradingsymbol,
     );
@@ -303,7 +303,7 @@ export class StrategyService {
     await this.orderManagerService.execute(this.executionContext.orders);
   }
 
-  private getStrategyTag(tradingsymbol: EquityTradingsymbol) {
+  private getStrategyTag = (tradingsymbol: EquityTradingsymbol) => {
     return `${tradingsymbol}_${DataService.getToday().month}`;
   }
 }
