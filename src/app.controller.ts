@@ -1,4 +1,12 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Redirect,
+  Req,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller()
@@ -6,7 +14,8 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  async initialize() {
+    console.log(`route: /`)
+    await this.appService.initialize();
   }
 }
