@@ -69,19 +69,19 @@ export class BalancesService {
 
   constructor(private readonly apiService: ApiService) {}
 
-  async initialize() {
+  initialize = async () => {
     await this.syncBalances();
   }
 
-  public async syncBalances() {
+  syncBalances = async () => {
     const zBalances = await this.apiService.getMargins();
 
     this.processBalances(zBalances);
   }
 
-  private processBalances(
+  private processBalances = (
     zBalances: Awaited<ReturnType<ApiService['getMargins']>>,
-  ) {
+  ) => {
     this.balances = {
       cash: zBalances.equity.available.cash,
       openingBalance: zBalances.equity.available.opening_balance,
@@ -90,11 +90,7 @@ export class BalancesService {
     };
   }
 
-  // static zBalancesToDomain(zBalance: Awaited<ReturnType<ApiService["getMargins"]>>): Balance {
-
-  // }
-
-  getBalances() {
+  getBalances = () => {
     return this.balances;
   }
 }

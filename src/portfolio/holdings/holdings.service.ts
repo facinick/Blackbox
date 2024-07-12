@@ -7,30 +7,29 @@ export class HoldingsService {
 
   constructor(private readonly apiService: ApiService) {}
 
-  async initialize() {
+  initialize = async () => {
     await this.syncHoldings();
   }
 
-  public async syncHoldings() {
+  syncHoldings = async () => {
     const zHoldings = await this.apiService.getHoldings();
-
     this.processHoldings(zHoldings);
   }
 
-  private processHoldings(
+  private processHoldings = (
     zHoldings: Awaited<ReturnType<ApiService['getHoldings']>>,
-  ) {
+  ) => {
     this.holdings = zHoldings.map(HoldingsService.zHoldingToDomain);
   }
 
-  static zHoldingToDomain(
+  static zHoldingToDomain = (
     zHolding: Awaited<ReturnType<ApiService['getHoldings']>>[0],
-  ): Holding {
+  ): Holding => {
     const tradingsymbol: EquityTradingsymbol = zHolding.tradingsymbol;
 
     const token: EquityToken = zHolding.instrument_token;
 
-    const quantity: number = zHolding.quantity;
+    const quantity: number = zHolding.authorised_quantity - zHolding.used_quantity + zHolding.quantity;
 
     const averagePrice: number = zHolding.average_price;
 
@@ -42,7 +41,7 @@ export class HoldingsService {
     };
   }
 
-  getHoldings() {
+  getHoldings = () => {
     return this.holdings;
   }
 }

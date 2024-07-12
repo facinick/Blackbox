@@ -13,18 +13,18 @@ export class PortfolioService {
     private readonly holdingsService: HoldingsService,
     private readonly positionsService: PositionsService,
     private readonly balanceService: BalancesService,
-    private readonly dataService: DataService,
   ) {}
 
-  async initialize() {
-    this.holdingsService.initialize();
-
-    this.positionsService.initialize();
-
-    this.balanceService.initialize();
+  initialize = async () => {
+    await this.holdingsService.initialize();
+    console.log(`holdings initialized`)
+    await this.positionsService.initialize();
+    console.log(`positions initialized`)
+    await this.balanceService.initialize();
+    console.log(`balance initialized`)
   }
 
-  async syncPortfolio({
+  syncPortfolio = async ({
     syncHoldings = true,
     syncPositions = true,
     syncBalance = true,
@@ -32,7 +32,7 @@ export class PortfolioService {
     syncHoldings: boolean;
     syncPositions: boolean;
     syncBalance: boolean;
-  }) {
+  }) => {
     const syncPromises: Promise<any>[] = [];
 
     if (syncHoldings) {
@@ -50,7 +50,7 @@ export class PortfolioService {
     await Promise.all(syncPromises);
   }
 
-  public getPortfolio() {
+  getPortfolio = () => {
     return {
       holdings: this.getHoldings(),
       positions: this.getPositions(),
@@ -58,35 +58,30 @@ export class PortfolioService {
     };
   }
 
-  public getHoldings() {
+  getHoldings = () => {
     return this.holdingsService.getHoldings();
   }
 
-  public getHoldingsForEquity(tradingsymbol: EquityTradingsymbol) {
+  getHoldingsForEquity = (tradingsymbol: EquityTradingsymbol) => {
     return this.holdingsService
       .getHoldings()
       .filter((holding) => holding.tradingsymbol === tradingsymbol);
   }
 
-  public getPositions() {
+  getPositions = () => {
     return this.positionsService.getPositions();
   }
 
-  public getBalances() {
+  getBalances = () => {
     return this.balanceService.getBalances();
   }
 
-  public getCallPositionsForEquityAndMonth(
-    equityTradingsymbol,
-    month: ExpiryMonth,
-  ) {
+  getCallPositionsForEquityAndMonth = (equityTradingsymbol, month: ExpiryMonth) => {
     const positions = [];
-
     const allPositions = this.getPositions();
 
     for (const position of allPositions) {
-      const derivativeName =
-        getDerivativeNameByEquityTradingsymbol(equityTradingsymbol);
+      const derivativeName = getDerivativeNameByEquityTradingsymbol(equityTradingsymbol);
 
       // position is CE, Expiring in month, name is derivativeName
       if (

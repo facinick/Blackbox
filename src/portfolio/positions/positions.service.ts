@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ApiService } from 'src/api/api.service';
 import { DataService } from 'src/data/data.service';
+import { Position } from './positions';
 
 @Injectable()
 export class PositionsService {
@@ -11,25 +12,25 @@ export class PositionsService {
     private readonly dataService: DataService,
   ) {}
 
-  async initialize() {
+  initialize = async() => {
     await this.syncPositions();
   }
 
-  public async syncPositions() {
-    const zPositions = await (await this.apiService.getPositions()).net;
-
+  public syncPositions = async () => {
+    const zPositions = await (await this.apiService.getNetDerivativePositions())
     this.processPositions(zPositions);
   }
 
-  private processPositions(
+  private processPositions = (
     zPositions: Awaited<ReturnType<ApiService['getPositions']>>['net'],
-  ) {
+  ) => {
     this.positions = zPositions.map(this.zPositionToDomain);
   }
 
-  private zPositionToDomain(
+  private zPositionToDomain = (
     zPosition: Awaited<ReturnType<ApiService['getPositions']>>['net'][0],
-  ): Position {
+  ): Position => {
+    console.log(`processing`, zPosition)
     const name: DerivativeName = DataService.parseDerivativeTradingSymbol(
       zPosition.tradingsymbol as DerivativeTradingsymbol,
     ).name;
@@ -59,7 +60,7 @@ export class PositionsService {
     };
   }
 
-  getPositions() {
+  getPositions = () => {
     return this.positions;
   }
 }
