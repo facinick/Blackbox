@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ApiService } from 'src/api/api.service';
 import { DataService } from 'src/data/data.service';
-import { Position } from './positions';
+import { DerivativePosition, Position } from './positions';
+import { openDerivativePositionsFilter } from './filters';
 
 @Injectable()
 export class PositionsService {
@@ -9,45 +10,44 @@ export class PositionsService {
 
   constructor(
     private readonly apiService: ApiService,
-    private readonly dataService: DataService,
   ) {}
 
-  initialize = async() => {
+  initialize = async () => {
     await this.syncPositions();
   }
 
   public syncPositions = async () => {
-    const zPositions = await (await this.apiService.getNetDerivativePositions())
-    this.processPositions(zPositions);
+    this.positions = await this.apiService.getNetPositions()
   }
 
-  private processPositions = (
-    zPositions: Awaited<ReturnType<ApiService['getPositions']>>['net'],
-  ) => {
-    this.positions = zPositions.map(this.zPositionToDomain);
+  getPositions = () => {
+    return this.positions;
   }
 
-  private zPositionToDomain = (
-    zPosition: Awaited<ReturnType<ApiService['getPositions']>>['net'][0],
-  ): Position => {
-    console.log(`processing`, zPosition)
-    const name: DerivativeName = DataService.parseDerivativeTradingSymbol(
-      zPosition.tradingsymbol as DerivativeTradingsymbol,
-    ).name;
+  getOpenDerivativePositions = (): DerivativePosition[] => {
+    const positions =  this.positions.filter(openDerivativePositionsFilter)
+    const derivativePositions = positions.map(this.positionToDerivativePosition)
+    return derivativePositions
+  }
 
-    const tradingsymbol: DerivativeTradingsymbol =
-      zPosition.tradingsymbol as DerivativeTradingsymbol;
+  private positionToDerivativePosition = (
+    position:Position,
+  ): DerivativePosition => {
 
-    const token: DerivativeToken = zPosition.instrument_token;
+    const derivativeInfo = DataService.getDerivativeInfoFromToken(position.token)
 
-    const expiry: DerivativeExpiry =
-      this.dataService.getDerivativeExpiryInfoFromDerivativeToken(token);
-
-    const quantity: number = zPosition.quantity;
-
-    const averagePrice: number = zPosition.average_price;
-
-    const buyOrSell: BuyOrSell = zPosition.quantity > 0 ? 'BUY' : 'SELL';
+    const name: DerivativeName = derivativeInfo.tradingsymbolParsed.name
+    const tradingsymbol: DerivativeTradingsymbol = derivativeInfo.tradingsymbol
+    const instrumentType: DerivativeInstrumentType = derivativeInfo.tradingsymbolParsed.instrumentType;
+    const token: DerivativeToken = position.token;
+    const expiry: DerivativeExpiryParsed = derivativeInfo.expiryParsed 
+    const strike: StrikePrice = derivativeInfo.strike 
+    const quantity: number = position.quantity;
+    const averagePrice: number = position.averagePrice;
+    if(position.quantity === 0) {
+      throw new Error(`open derivative position has quantity 0`)
+    }
+    const buyOrSell: BuyOrSell = position.quantity > 0 ? 'BUY' : 'SELL';
 
     return {
       name,
@@ -57,10 +57,8 @@ export class PositionsService {
       quantity,
       averagePrice,
       buyOrSell,
+      instrumentType,
+      strike
     };
-  }
-
-  getPositions = () => {
-    return this.positions;
   }
 }

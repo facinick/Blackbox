@@ -83,12 +83,10 @@ export class ApiService {
     return holdings
   }
 
-  async getPositions() {
-    return this.kc.getPositions();
-  }
-
-  async getNetDerivativePositions() {
-    return (await this.kc.getPositions()).net.filter((position => position.exchange === KiteConnect['EXCHANGE_NFO'] || position.exchange === KiteConnect['EXCHANGE_BFO']));
+  getNetPositions = async () => {
+    const zPositions = await this.kc.getPositions()
+    const Positions = zPositions.net.map(PositionsMapper.toDomain)
+    return Positions
   }
 
   async getAvailableEquities() {
