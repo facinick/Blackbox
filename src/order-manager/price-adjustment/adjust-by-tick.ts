@@ -7,13 +7,12 @@ import {
 
 @Injectable()
 class AdjustByTick implements PriceAdjustmentStrategy {
-  constructor(private readonly dataService: DataService) {}
 
   async getNextPrice(
     orderRequest: OrderRequest,
     lastPrice: number,
   ): Promise<number> {
-    const tickSize = this.dataService.getTickSizeForTradingsymbol(
+    const tickSize = DataService.getTickSizeForTradingsymbol(
       orderRequest.tradingsymbol,
     );
 

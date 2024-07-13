@@ -108,7 +108,7 @@ class OrderHandler {
       this.lastPrice,
     );
 
-    const tickSize = this.dataService.getTickSizeForTradingsymbol(
+    const tickSize = DataService.getTickSizeForTradingsymbol(
       this.orderRequest.tradingsymbol,
     );
 
