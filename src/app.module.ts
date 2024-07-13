@@ -11,16 +11,14 @@ import { LedgerModule } from './ledger/ledger.module';
 import { StrategyModule } from './strategy/strategy.module';
 import { AppController } from './app.controller';
 import { OrderManagerModule } from './order-manager/order-manager.module';
-
+import { AppLoggerModule } from './logger/logger.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    AppLoggerModule,
+    ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
     AuthModule,
-    // ApiModule,
     LiveModule,
     DataModule,
     PortfoliosModule,
