@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ApiService } from 'src/api/api.service';
 import { HoldingsService } from './holdings/holdings.service';
-import { LedgersService } from '../ledger/ledger.service';
 import { PositionsService } from './positions/positions.service';
 import { BalancesService } from './balances/balances.service';
-import { DataService } from 'src/data/data.service';
 import { getDerivativeNameByEquityTradingsymbol } from 'src/data/eq_de_map';
 
 @Injectable()
@@ -72,13 +69,17 @@ export class PortfolioService {
     return this.positionsService.getPositions();
   }
 
+  getOpenDerivativePositions = () => {
+    return this.positionsService.getOpenDerivativePositions();
+  }
+
   getBalances = () => {
     return this.balanceService.getBalances();
   }
 
-  getCallPositionsForEquityAndMonth = (equityTradingsymbol, month: ExpiryMonth) => {
+  getCallPositionsForEquityAndMonth = (equityTradingsymbol: EquityTradingsymbol, month: ExpiryMonth) => {
     const positions = [];
-    const allPositions = this.getPositions();
+    const allPositions = this.getOpenDerivativePositions();
 
     for (const position of allPositions) {
       const derivativeName = getDerivativeNameByEquityTradingsymbol(equityTradingsymbol);
@@ -86,8 +87,8 @@ export class PortfolioService {
       // position is CE, Expiring in month, name is derivativeName
       if (
         position.name === derivativeName &&
-        DataService.parseExpiry(position.expiry).month === month &&
-        DataService.isCallOption(position.tradingsymbol)
+        position.expiry.month === month &&
+        position.instrumentType === "CE"
       ) {
         positions.push(position);
       }
