@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiService } from 'src/api/api.service';
 import { TokenService } from './token.service';
+import { AppLogger } from 'src/logger/logger.service';
 
 /*
 Login flow¶
@@ -29,27 +30,26 @@ export class AuthService {
     private readonly apiService: ApiService,
     private readonly configService: ConfigService,
     private readonly tokenService: TokenService,
-  ) {}
+    private readonly logger: AppLogger
+  ) {
+    this.logger.setContext(this.constructor.name)
+  }
 
-  public loginWithExistingRequestToken = async () => {
+  public findExistingRequestToken = async () => {
     const requestToken = await this.tokenService.getRequestToken();
+    this.logger.debug(`Found request token in db: ${requestToken}`)
+    return requestToken
+  }
 
-    if (requestToken) {
-      console.log(`request token found: ${requestToken}`)
-      try {
-        const session = await this.generateSession(requestToken);
-        await this.setRequestToken(requestToken)
-        console.log(`session generated:`, session)
-        await this.saveSession(session)
-        console.log(`session saved`)
-      } catch (error) {
-        console.log(`failed to login with existing token`, error)
-        await this.tokenService.clearTokens();
-        throw new Error(`invalid request token in db`)
-      }
-    } else {
-      console.log(`no request token found`)
-      throw new Error(`no request token in db`)
+  public loginWithRequestToken = async (requestToken: string) => {
+    try {
+      const session = await this.generateSession(requestToken);
+      await this.setRequestToken(requestToken)
+      await this.saveSession(session)
+    } catch (error) {
+      this.logger.debug(`Failed to login with request token: ${requestToken}`, error)
+      await this.tokenService.clearTokens();
+      throw new Error(`invalid request token in db`)
     }
   }
 
@@ -57,8 +57,7 @@ export class AuthService {
     return this.apiService.getLoginURL();
   }
 
-  public generateSession = async (requestToken: string) => {
-    console.log(`generating new session`)
+  public generateSession = async (requestToken: string) => { 
     return this.apiService.generateSession(
       requestToken,
       this.configService.get("ZERODHA_API_SECRET"),
@@ -66,25 +65,20 @@ export class AuthService {
   }
 
   public saveSession = async (session: ZSession) => {
-    console.log(`saving session`)
     await this.setAccessToken(session.access_token);
     this.initializeTicker(session.access_token);
   }
 
   public logout = async () => {
-    console.log(`logging out`)
     const accessToken = await this.tokenService.getAccessToken()
     // const refreshToken = await this.tokenService.getRefreshToken()
-
     await this.apiService.invalidateAccessToken(accessToken);
     // await this.apiService.invalidateRefreshToken(refreshToken);
-
     await this.tokenService.clearTokens()
   }
 
   public refresh = async () => {
     const refreshToken = await this.tokenService.getRefreshToken()
-
     const sessionData = await this.apiService.renewAccessToken(
       refreshToken,
       this.configService.get("ZERODHA_API_SECRET"),
@@ -93,23 +87,19 @@ export class AuthService {
   }
 
   private setAccessToken = async (accessToken: string) => {
-    console.log(`saving access token: ${accessToken}`)
     await this.tokenService.saveAccessToken(accessToken)
     this.apiService.setAccessToken(accessToken);
   }
 
   public setRequestToken = async (requestToken: string) => {
-    console.log(`saving request token: ${requestToken}`)
     await this.tokenService.saveRequestToken(requestToken)
   }
 
   private setRefreshToken = async (refreshToken: string) => {
-    console.log(`saving refresh token: ${refreshToken}`)
     await this.tokenService.saveRefreshToken(refreshToken)
   }
 
   private initializeTicker = (accessToken: string) => {
-    console.log(`initializing ticker`)
     this.apiService.initializeTicker(accessToken);
   }
 }
