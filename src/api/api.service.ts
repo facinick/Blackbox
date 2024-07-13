@@ -97,8 +97,10 @@ export class ApiService {
     return this.kc.getInstruments(KiteConnect['EXCHANGE_NFO']);
   }
 
-  async getMargins() {
-    return await this.kc.getMargins(KiteConnect['MARGIN_EQUITY']);
+  async getBalance() {
+    const zBalance = await this.kc.getMargins(KiteConnect['MARGIN_EQUITY'])
+    const balance = BalancesMapper.toDomain(zBalance)
+    return balance
   }
 
   async generateSession(requestToken: string, api_secret: string) {
