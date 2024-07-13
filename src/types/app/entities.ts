@@ -1,7 +1,7 @@
 type StrikePrice = number;
-type InstrumentType = 'CE' | 'PE' | 'EQ';
+type InstrumentType = 'CE' | 'PE' | 'EQ' | 'FUT'
 type Segment = 'NFO_OPT' | 'NSE' | 'BFO_OPT' | 'BSE';
-type Exchange = 'NFO' | 'NSE' | 'BFO' | 'BSE'
+type Exchange = 'NFO' | 'NSE' | 'BFO' | 'BSE' | 'CDS' | 'BCD' | 'MCX'
 type Product = 'NRML' | 'CNC';
 type ExpiryMonth =
   | 'JAN'
@@ -26,8 +26,8 @@ type EquityInstrumentType = Extract<InstrumentType, 'EQ'>;
 type EquityTradingsymbol = string;
 type EquityToken = number;
 type EquityTickSize = number;
-type EquitySegment = Extract<Segment, 'NSE'>;
-type EquityExchange = Extract<Exchange, 'NSE'>;
+type EquitySegment = Extract<Segment, 'NSE' | 'BSE'>;
+type EquityExchange = Extract<Exchange, 'NSE'| 'BSE'>;
 
 // Derivatives
 type DerivativeName = string;
@@ -51,8 +51,8 @@ type DerivativeExpiryParsed = {
 type DerivativeLotSize = number;
 type DerivativeTickSize = number;
 type DerivativeStepSize = number;
-type DerivativeSegment = Extract<Segment, 'NFO_OPT'>;
-type DerivativeExchange = Extract<Exchange, 'NFO'>;
+type DerivativeSegment = Extract<Segment, 'NFO_OPT' | 'BFO_OPT'>;
+type DerivativeExchange = Extract<Exchange, 'NFO' | 'BFO'>;
 
 type Tradingsymbol = EquityTradingsymbol | DerivativeTradingsymbol;
 type Token = EquityToken | DerivativeToken;
