@@ -3,6 +3,7 @@ import { ApiService } from 'src/api/api.service';
 import { DataService } from 'src/data/data.service';
 import { DerivativePosition, Position } from './positions';
 import { openDerivativePositionsFilter } from './filters';
+import { AppLogger } from 'src/logger/logger.service';
 
 @Injectable()
 export class PositionsService {
@@ -10,14 +11,20 @@ export class PositionsService {
 
   constructor(
     private readonly apiService: ApiService,
-  ) {}
+    private readonly logger: AppLogger,
+  ) {
+    this.logger.setContext(this.constructor.name)
+  }
 
   initialize = async () => {
+    this.logger.log(`inintializing positions service`)
     await this.syncPositions();
   }
 
   public syncPositions = async () => {
     this.positions = await this.apiService.getNetPositions()
+    this.logger.log(`positions updated:`,this.positions)
+    this.logger.log(`open derivative positions:`,this.getOpenDerivativePositions())
   }
 
   getPositions = () => {
@@ -33,9 +40,7 @@ export class PositionsService {
   private positionToDerivativePosition = (
     position:Position,
   ): DerivativePosition => {
-
     const derivativeInfo = DataService.getDerivativeInfoFromToken(position.token)
-
     const name: DerivativeName = derivativeInfo.tradingsymbolParsed.name
     const tradingsymbol: DerivativeTradingsymbol = derivativeInfo.tradingsymbol
     const instrumentType: DerivativeInstrumentType = derivativeInfo.tradingsymbolParsed.instrumentType;

@@ -3,6 +3,8 @@ import { HoldingsService } from './holdings/holdings.service';
 import { PositionsService } from './positions/positions.service';
 import { BalancesService } from './balances/balances.service';
 import { getDerivativeNameByEquityTradingsymbol } from 'src/data/eq_de_map';
+import { AppLogger } from 'src/logger/logger.service';
+import { OnEvent } from '@nestjs/event-emitter';
 
 @Injectable()
 export class PortfolioService {
@@ -10,15 +12,18 @@ export class PortfolioService {
     private readonly holdingsService: HoldingsService,
     private readonly positionsService: PositionsService,
     private readonly balanceService: BalancesService,
-  ) {}
+    private readonly logger: AppLogger
+  ) {
+    this.logger.setContext(this.constructor.name)
+  }
 
   initialize = async () => {
     await this.holdingsService.initialize();
-    console.log(`holdings initialized`)
+    this.logger.log(`holdings initialized`)
     await this.positionsService.initialize();
-    console.log(`positions initialized`)
+    this.logger.log(`positions initialized`)
     await this.balanceService.initialize();
-    console.log(`balance initialized`)
+    this.logger.log(`balance initialized`)
   }
 
   syncPortfolio = async ({
@@ -95,4 +100,7 @@ export class PortfolioService {
     }
     return positions;
   }
+
+  // @OnEvent("order.*") 
+  // orderUpdateHandler
 }
