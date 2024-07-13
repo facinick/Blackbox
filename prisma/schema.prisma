@@ -19,7 +19,7 @@ model Token {
   refreshToken    String?
 }
 
-model Ledger {
+model Trade {
   id             String @id
   tradingsymbol  String
   token          Int
