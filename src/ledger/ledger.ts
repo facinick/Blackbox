@@ -1,7 +1,5 @@
-import { OrderId, OrderTag } from "src/order-manager/types";
-
-type Ledger = {
-  id: OrderId;
+type Trade = {
+  id: string;
   tradingsymbol: Tradingsymbol;
   token: Token;
   averagePrice: number;
@@ -10,7 +8,7 @@ type Ledger = {
   segment: Segment;
   exchange: Exchange;
   buyOrSell: BuyOrSell;
-  tag: OrderTag;
+  tag: string;
 };
 
-export { Ledger };
+export { Trade };

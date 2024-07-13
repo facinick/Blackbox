@@ -1,95 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { Ledger as PLedger, PrismaClient } from '@prisma/client';
 import { OrderUpdate } from 'src/live/live.service';
-import { Ledger } from './ledger';
-import { OrderId, OrderTag } from 'src/order-manager/types';
 import { OnEvent } from '@nestjs/event-emitter';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Trade } from './ledger';
+import { LedgerStorePort } from './ledger.store.port';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class LedgersService {
-  private ledger: Ledger[];
+  private trades: Trade[];
 
-  constructor(private readonly db: PrismaService) {}
+  constructor(
+    private readonly storage: LedgerStorePort
+  ) {}
 
   async initialize() {
     await this.syncLedger();
   }
 
   public async syncLedger() {
-    const dbLedger = await this.db.ledger.findMany();
-
-    this.processLedger(dbLedger);
+    this.trades = await this.storage.getTrades()
   }
 
-  private processLedger(dbLedger: PLedger[]) {
-    this.ledger = dbLedger.map(LedgersService.pLedgerToDomain);
+  public getTrades() {
+    return this.trades;
   }
 
-  static pLedgerToDomain(pLedger: PLedger): Ledger {
-    const id: OrderId = pLedger.id;
-
-    const tradingsymbol: Tradingsymbol = pLedger.tradingsymbol;
-
-    const token: Token = pLedger.token;
-
-    const averagePrice: number = pLedger.averagePrice;
-
-    const quantity: number = pLedger.quantity;
-
-    const instrumentType: InstrumentType =
-      pLedger.instrumentType as InstrumentType;
-
-    const buyOrSell: BuyOrSell = pLedger.buyOrSell as BuyOrSell;
-
-    const tag: OrderTag = pLedger.tag;
-
-    const segment: Segment = pLedger.segment as Segment;
-
-    const exchange: Exchange = pLedger.exchange as Exchange;
-
-    return {
-      id,
-      tradingsymbol,
-      token,
-      averagePrice,
-      quantity,
-      instrumentType,
-      segment,
-      exchange,
-      buyOrSell,
-      tag,
-    };
-  }
-
-  public getLedger() {
-    return this.ledger;
-  }
-
-  public getRecordByTag(tag: string) {
-    return this.ledger.filter((order) => order.tag === tag);
+  public getTradesByTag(tag: string) {
+    return this.trades.filter(trade => trade.tag === tag)
   }
 
   // mutation, after this make sure to load ledger again
-  public async addRecord(ledger: Ledger) {
-    const record: PLedger = {
-      id: ledger.id,
-      tradingsymbol: ledger.tradingsymbol,
-      token: ledger.token,
-      averagePrice: ledger.averagePrice,
-      quantity: ledger.quantity,
-      instrumentType: ledger.instrumentType,
-      buyOrSell: ledger.buyOrSell,
-      segment: ledger.segment,
-      exchange: ledger.exchange,
-      tag: ledger.tag,
-    };
+  public async saveTrade(trade: Trade) {
+    await this.storage.saveTrade(trade)
+  }
 
-    await this.db.ledger.create({
-      data: {
-        ...record,
-      },
-    });
+  static create = (createTradeDto: Omit<Trade, 'id'>) => {
+    return {
+      ...createTradeDto,
+      id: randomUUID()
+    }
   }
 
   @OnEvent('order.completed')
