@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { KiteConnect, KiteTicker } from 'kiteconnect';
-import { ZOrderUpdate, ZTick } from 'src/live/live.service';
 import { DataService } from 'src/data/data.service';
 import { ConfigService } from '@nestjs/config';
 import { HoldingsApiPort } from 'src/portfolio/holdings/holdings.api.port';
@@ -9,18 +8,44 @@ import { BalancesMapper } from 'src/portfolio/balances/balances.zerodha.mapper';
 import { BalancesApiPort } from 'src/portfolio/balances/balances.api.port';
 import { PositionsMapper } from 'src/portfolio/positions/positions.zerodha.mapper';
 import { PositionsApiPort } from 'src/portfolio/positions/positions.api.port';
+import { AppLogger } from 'src/logger/logger.service';
+import { OrdersMapper } from 'src/order-manager/order.zerodha.mapper';
+import { OrderApiPort } from 'src/order-manager/order.api.port';
+import { DataApiPort } from 'src/data/data.api.port';
+import { InstrumentMapper } from 'src/data/data.zerodha.mapper';
+import { LiveMapper, ZOrderUpdate, ZTick } from 'src/live/live.zerodha.mapper';
+import { OrderUpdate, Tick } from 'src/live/live';
+import { LiveApiPort } from 'src/live/live.api.port';
 
 @Injectable()
-export class ApiService implements HoldingsApiPort, BalancesApiPort, PositionsApiPort {
+export class ApiService implements 
+    HoldingsApiPort, 
+    BalancesApiPort, 
+    PositionsApiPort, 
+    OrderApiPort, 
+    DataApiPort, 
+    LiveApiPort {
+  
   private kc: KiteConnect;
   private ticker: KiteTicker | undefined;
 
+  private tickListeners: Set<(ticks: Tick[]) => void> = new Set()
+  private orderUpdateListeners: Set<(update: OrderUpdate) => void> = new Set()
+  private wsConnectListeners: Set<() => void> = new Set()
+  private wsDisconnectListeners: Set<(error: any) => void> = new Set()
+  private wsErrorListeners: Set<(error: any) => void> = new Set()
+  private wsCloseListeners: Set<() => void> = new Set()
+  private wsReconnectListeners: Set<() => void> = new Set()
+  private wsNoreconnectListeners: Set<() => void> = new Set()
+
   constructor(
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly logger: AppLogger
   ) {
     this.kc = new KiteConnect({
       api_key: configService.get("ZERODHA_API_KEY")
     });
+    this.logger.setContext(this.constructor.name)
   }
 
   initializeTicker(accessToken) {
@@ -28,6 +53,15 @@ export class ApiService implements HoldingsApiPort, BalancesApiPort, PositionsAp
       api_key: this.configService.get("ZERODHA_API_KEY"),
       access_token: accessToken,
     });
+
+    this.ticker.on('ticks', this._onTick)
+    this.ticker.on('order_update', this._onOrderUpdate)
+    this.ticker.on('connect', this._onConnect)
+    this.ticker.on('disconnect', this._onDisconnect)
+    this.ticker.on('error', this._onError)
+    this.ticker.on('close', this._onClose)
+    this.ticker.on('reconnect', this._onReconnect)
+    this.ticker.on('noreconnect', this._onNoreconnect)
   }
 
   async cancelOrder(cancelOrderDto: { orderId: string }) {
@@ -70,10 +104,12 @@ export class ApiService implements HoldingsApiPort, BalancesApiPort, PositionsAp
   }
 
   async getOrders() {
-    return this.kc.getOrders();
+    const zOrders = await this.kc.getOrders()
+    const orders = zOrders.map(OrdersMapper.toDomain)
+    return orders
   }
 
-  async modifyPrice(modifyPriceDto: { orderId: string; price: number }) {
+  async modifyOrderPrice(modifyPriceDto: { orderId: string; price: number }) {
     const { orderId, price } = modifyPriceDto;
 
     return (
@@ -85,26 +121,35 @@ export class ApiService implements HoldingsApiPort, BalancesApiPort, PositionsAp
 
   getHoldings = async () => {
     const zHoldings = await this.kc.getHoldings()
+    this.logger.debug(`fetched holdings from broker:`,zHoldings)
     const holdings = zHoldings.map(HoldingsMapper.toDomain)
     return holdings
   }
 
   getNetPositions = async () => {
     const zPositions = await this.kc.getPositions()
+    this.logger.debug(`fetched positions from broker:`,zPositions)
     const Positions = zPositions.net.map(PositionsMapper.toDomain)
     return Positions
   }
 
-  async getAvailableEquities() {
-    return this.kc.getInstruments(KiteConnect['EXCHANGE_NSE']);
+  async getTradableEquities() {
+    const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NSE'])
+    this.logger.debug(`fetched tradable eq instruments from broker:`)
+    const instruments = zInstruments.map(InstrumentMapper.toDomain)
+    return instruments
   }
 
-  async getAvailableDerivatives() {
-    return this.kc.getInstruments(KiteConnect['EXCHANGE_NFO']);
+  async getTradableDerivatives() {
+    const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NFO'])
+    this.logger.debug(`fetched tradable eq instruments from broker:`)
+    const instruments = zInstruments.map(InstrumentMapper.toDomain)
+    return instruments
   }
 
   async getBalance() {
     const zBalance = await this.kc.getMargins(KiteConnect['MARGIN_EQUITY'])
+    this.logger.debug(`fetched balance from broker:`,zBalance)
     const balance = BalancesMapper.toDomain(zBalance)
     return balance
   }
@@ -163,22 +208,6 @@ export class ApiService implements HoldingsApiPort, BalancesApiPort, PositionsAp
     this.ticker.unsubscribe(tokens);
   }
 
-  registerForOrderUpdates(func: (orderUpdate: ZOrderUpdate) => void) {
-    this.ticker.on('order_update', func);
-  }
-
-  registerForConnect(func: () => void) {
-    this.ticker.on('connect', func);
-  }
-
-  registerForError(func: (error: any) => void) {
-    this.ticker.on('error', func);
-  }
-
-  registerForPriceUpdates(func: (tick: ZTick) => void) {
-    this.ticker.on('ticks', func);
-  }
-
   isConnected() {
     return this.ticker.connected();
   }
@@ -186,4 +215,101 @@ export class ApiService implements HoldingsApiPort, BalancesApiPort, PositionsAp
   disconnectTicker() {
     this.ticker.disconnect();
   }
+
+  registerForPriceUpdates = (func: (ticks: Tick[]) => void) => {
+    if(!this.tickListeners.has(func)) {
+      this.tickListeners.add(func)
+    }
+  }
+
+  private _onTick = (zTicks: ZTick[]) => {
+    this.tickListeners.forEach(listener => {
+      listener(zTicks.map(LiveMapper.Tick.toDomain))
+    });
+  }
+
+  registerForOrderUpdates = (func: (orderUpdate: OrderUpdate) => void) => {
+    if(!this.orderUpdateListeners.has(func)) {
+      this.orderUpdateListeners.add(func)
+    }
+  }
+
+  private _onOrderUpdate = (zUpdate: ZOrderUpdate) => {
+    this.orderUpdateListeners.forEach(listener => {
+      listener(LiveMapper.OrderUpdate.toDomain(zUpdate))
+    });
+  }
+
+  registerForConnect = (func: () => void) => {
+    if(!this.wsConnectListeners.has(func)) {
+      this.wsConnectListeners.add(func)
+    }
+  }
+
+  private _onConnect = () => {
+    this.wsConnectListeners.forEach(listener => {
+      listener()
+    });
+  }
+
+  registerForDisconnect = (func: (error: any) => void) => {
+    if(!this.wsDisconnectListeners.has(func)) {
+      this.wsDisconnectListeners.add(func)
+    }
+  }
+
+  private _onDisconnect = (error: any) => {
+    this.wsDisconnectListeners.forEach(listener => {
+      listener(error)
+    });
+  }
+
+  registerForError = (func: (error: any) => void) => {
+    if(!this.wsErrorListeners.has(func)) {
+      this.wsErrorListeners.add(func)
+    }
+  }
+
+  private _onError = (error) => {
+    this.wsErrorListeners.forEach(listener => {
+      listener(error)
+    });
+  }
+
+  registerForClose = (func: () => void) => {
+    if(!this.wsCloseListeners.has(func)) {
+      this.wsCloseListeners.add(func)
+    }
+  }
+
+  private _onClose = () => {
+    this.wsCloseListeners.forEach(listener => {
+      listener()
+    });
+  }
+
+  registerForReconnect = (func: () => void) => {
+    if(!this.wsReconnectListeners.has(func)) {
+      this.wsReconnectListeners.add(func)
+    }
+  }
+
+  private _onReconnect = () => {
+    this.wsReconnectListeners.forEach(listener => {
+      listener()
+    });
+  }
+
+  registerForNoreconnect = (func: () => void) => {
+    if(!this.wsNoreconnectListeners.has(func)) {
+      this.wsNoreconnectListeners.add(func)
+    }
+  }
+
+  private _onNoreconnect = () => {
+    this.wsNoreconnectListeners.forEach(listener => {
+      listener()
+    });
+  }
+
 }
