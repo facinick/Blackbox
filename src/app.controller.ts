@@ -15,7 +15,6 @@ export class AppController {
 
   @Get()
   async initialize() {
-    console.log(`route: /`)
     await this.appService.initialize();
   }
 }

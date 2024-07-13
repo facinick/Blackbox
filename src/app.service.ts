@@ -6,6 +6,7 @@ import { LiveService } from './live/live.service';
 import { PortfolioService } from './portfolio/portfolio.service';
 import { StrategyService } from './strategy/strategy.service';
 import { AuthService } from './auth/auth.service';
+import { AppLogger } from './logger/logger.service';
 
 @Injectable()
 export class AppService {
@@ -17,20 +18,22 @@ export class AppService {
     private readonly portfolioService: PortfolioService,
     private readonly ledgerService: LedgersService,
     private readonly strategyService: StrategyService,
-    private readonly orderManagerService: OrderManagerService,
-  ) { }
+    private readonly logger: AppLogger
+  ) {
+    this.logger.setContext(this.constructor.name)
+   }
 
   // assuming we are authenticated, and ticker is setup by now
   async initialize() {
     await this.dataService.initialize();
-    console.log(`data service initialized`)
-    // await this.liveService.connect();
-    console.log(`live service initialized`)
+    this.logger.log(`Data service initialised`)
+    // await this.liveService.initialize();
+    this.logger.log(`live service initialized`)
     await this.portfolioService.initialize();
-    console.log(`portfolio service initialized`)
+    this.logger.log(`portfolio service initialized`)
     await this.ledgerService.initialize();
-    console.log(`ledger service initialized`)
+    this.logger.log(`ledger service initialized`)
     await this.strategyService.initialize();
-    console.log(`strategy service initialized`)
+    this.logger.log(`strategy service initialized`)
   }
 }
