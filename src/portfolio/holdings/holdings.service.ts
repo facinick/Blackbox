@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ApiService } from 'src/api/api.service';
+import { Holding } from './holdings';
 
 @Injectable()
 export class HoldingsService {
@@ -12,33 +13,7 @@ export class HoldingsService {
   }
 
   syncHoldings = async () => {
-    const zHoldings = await this.apiService.getHoldings();
-    this.processHoldings(zHoldings);
-  }
-
-  private processHoldings = (
-    zHoldings: Awaited<ReturnType<ApiService['getHoldings']>>,
-  ) => {
-    this.holdings = zHoldings.map(HoldingsService.zHoldingToDomain);
-  }
-
-  static zHoldingToDomain = (
-    zHolding: Awaited<ReturnType<ApiService['getHoldings']>>[0],
-  ): Holding => {
-    const tradingsymbol: EquityTradingsymbol = zHolding.tradingsymbol;
-
-    const token: EquityToken = zHolding.instrument_token;
-
-    const quantity: number = zHolding.authorised_quantity - zHolding.used_quantity + zHolding.quantity;
-
-    const averagePrice: number = zHolding.average_price;
-
-    return {
-      tradingsymbol,
-      token,
-      quantity,
-      averagePrice,
-    };
+    this.holdings = await this.apiService.getHoldings();
   }
 
   getHoldings = () => {

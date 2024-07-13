@@ -77,8 +77,10 @@ export class ApiService {
     ).order_id;
   }
 
-  async getHoldings() {
-    return this.kc.getHoldings();
+  getHoldings = async () => {
+    const zHoldings = await this.kc.getHoldings()
+    const holdings = zHoldings.map(HoldingsMapper.toDomain)
+    return holdings
   }
 
   async getPositions() {
@@ -97,10 +99,8 @@ export class ApiService {
     return this.kc.getInstruments(KiteConnect['EXCHANGE_NFO']);
   }
 
-  async getBalance() {
-    const zBalance = await this.kc.getMargins(KiteConnect['MARGIN_EQUITY'])
-    const balance = BalancesMapper.toDomain(zBalance)
-    return balance
+  async getMargins() {
+    return await this.kc.getMargins(KiteConnect['MARGIN_EQUITY']);
   }
 
   async generateSession(requestToken: string, api_secret: string) {

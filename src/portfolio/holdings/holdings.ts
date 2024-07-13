@@ -4,3 +4,7 @@ type Holding = {
   quantity: number;
   averagePrice: number;
 };
+
+export {
+  type Holding
+}
