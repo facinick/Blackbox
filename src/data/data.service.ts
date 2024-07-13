@@ -7,63 +7,8 @@ import {
   getEquityTradingsymbolByDerivativeName,
 } from './eq_de_map';
 import * as path from 'node:path';
-
-type RawDerviative = {
-  instrument_token: string; // "16168450",
-  // "exchange_token": number, // "63158",
-  tradingsymbol: string; // "ASIANPAINT21SEP2150CE",
-  name: string; // "ASIANPAINT", <------------------
-  // "last_price": number, // 0,
-  expiry: string; // "2021-09-30T00:00:00.000Z",
-  strike: number; // 2150,
-  tick_size: number; // 0.05,
-  lot_size: number; // 300,
-  instrument_type: string; // "CE",
-  segment: string; // "NFO-OPT",
-  exchange: string; // "NFO"
-};
-
-type RawEquity = {
-  instrument_token: string; // "60417",
-  // "exchange_token": string, // "236",
-  tradingsymbol: string; // "ASIANPAINT", <------------------
-  name: string; // "ASIAN PAINTS",
-  // "last_price": number, // 0,
-  // "expiry": string, // "",
-  // "strike": number, // 0,
-  tick_size: number; // 0.05,
-  // "lot_size": number, // 1,
-  instrument_type: string; // "EQ",
-  segment: string; //"BSE",
-  exchange: string; //"BSE"
-};
-
-export type MappedDerivative = {
-  token: DerivativeToken;
-  name: DerivativeName;
-  tradingsymbol: DerivativeTradingsymbol;
-  tradingsymbolParsed: DerivativeTradingsymbolParsed;
-  expiry: string;
-  expiryParsed: DerivativeExpiryParsed;
-  strike: StrikePrice;
-  tickSize: DerivativeTickSize;
-  lotSize: number;
-  stepSize: number;
-  instrumentType: DerivativeInstrumentType;
-  segment: DerivativeSegment;
-  exchange: DerivativeExchange;
-};
-
-export type MappedEquity = {
-  token: EquityToken;
-  tradingsymbol: EquityTradingsymbol;
-  tickSize: EquityTickSize;
-  instrumentType: EquityInstrumentType;
-  segment: EquitySegment;
-  exchange: EquityExchange;
-  calls: DerivativeToken[];
-  puts: DerivativeToken[];
-};
+import { DataMapper } from './data.local-json.mapper';
+import { Derivative, Equity } from './data';
 
 @Injectable()
 export class DataService {
@@ -72,7 +17,7 @@ export class DataService {
 
   private static readonly equitiesTokenReferenceMap = new Map<
     EquityToken,
-    MappedEquity
+    Equity
   >();
   private static readonly equitiesTradingSymbolReferenceStepSizeMap = new Map<
     EquityTradingsymbol,
@@ -80,16 +25,16 @@ export class DataService {
   >();
   private static readonly equitiesTradingSymbolReferenceMap = new Map<
     EquityTradingsymbol,
-    MappedEquity
+    Equity
   >();
 
   private static readonly derivativesTokenReferenceMap = new Map<
     DerivativeToken,
-    MappedDerivative
+    Derivative
   >();
   private static readonly derivativesTradingsymbolReferenceMap = new Map<
     DerivativeTradingsymbol,
-    MappedDerivative
+    Derivative
   >();
 
   private static readonly expiries: Array<DerivativeExpiryParsed> = [];
@@ -112,7 +57,7 @@ export class DataService {
     DataService.calculateStepSizeFromCallsAndUpdateDerivatives();
 
     // temporary, delete this after development
-    DataService.saveTransformedDataForInspection();
+    await DataService.saveTransformedDataForInspection();
   }
 
   // temporary, delete this after development
@@ -152,24 +97,19 @@ export class DataService {
   }
 
   private loadDerivatives = async () => {
-    console.log(`loading derivatives in-memory`)
     const rawFileExists = await DataService.fileExists(DataService.RAW_DERIVATIVES_FILENAME);
 
     if (rawFileExists) {
       // read
-      console.log(`reading from file: ${DataService.RAW_DERIVATIVES_FILENAME}`)
       const rawDerivatives = (await DataService.readJsonFromFile(
         DataService.RAW_DERIVATIVES_FILENAME,
-      )) as RawDerviative[];
+      ));
       // transform and process
       await DataService.processDerivatives(rawDerivatives);
     } else {
       // fetch
-      console.log(`file not found`)
-      console.log(`fetching derivatives...`)
-      const rawDerivatives = await this.apiService.getAvailableDerivatives();
+      const rawDerivatives = await this.apiService.getTradableDerivatives();
       // write
-      console.log(`writing derivatives to ${DataService.RAW_DERIVATIVES_FILENAME}`)
       await DataService.writeJsonToFile(
         DataService.RAW_DERIVATIVES_FILENAME,
         rawDerivatives,
@@ -226,12 +166,12 @@ export class DataService {
       // read
       const rawEquities = (await DataService.readJsonFromFile(
         DataService.RAW_EQUITIES_FILENAME,
-      )) as RawEquity[];
+      ))
       // transform and process
       await DataService.processEquities(rawEquities);
     } else {
       // fetch
-      const rawEquities = await this.apiService.getAvailableEquities();
+      const rawEquities = await this.apiService.getTradableEquities();
       // write
       await DataService.writeJsonToFile(
         DataService.RAW_EQUITIES_FILENAME,
@@ -242,8 +182,7 @@ export class DataService {
     }
   }
 
-  private static processDerivatives = (rawDerivatives: RawDerviative[]) => {
-    console.log(`processing derivatives`)
+  private static processDerivatives = (rawDerivatives) => {
     const uniqueExpiries: Set<string> = new Set();
 
     rawDerivatives.forEach((rawDerivative) => {
@@ -267,7 +206,7 @@ export class DataService {
       const tradingSymbolKey =
         rawDerivative.tradingsymbol as DerivativeTradingsymbol;
 
-      const value = DataService.rawDerivativeToDomain(rawDerivative);
+      const value = DataMapper.Derivative.toDomain(rawDerivative);
 
       // passing same object reference, to access data using both token and symbol
       DataService.derivativesTokenReferenceMap.set(tokenKey, value);
@@ -278,13 +217,10 @@ export class DataService {
       uniqueExpiries.add(expiryDate.toISOString());
     });
 
-    console.log(`processed derivatives`)
-
     DataService.processExpiries(uniqueExpiries);
   }
 
   private static processExpiries = (uniqueExpiries: Set<string>) => {
-    console.log(`processing expiry data`)
     uniqueExpiries.forEach((expiryString) => {
       const expiryDate = new Date(expiryString);
 
@@ -309,7 +245,6 @@ export class DataService {
       );
       return dateA.getTime() - dateB.getTime();
     });
-    console.log(`processed expiry data`)
   }
 
   private static linkDerivatives = () => {
@@ -367,106 +302,31 @@ export class DataService {
     }
   }
 
-  static rawDerivativeToDomain = (rawDerivative: RawDerviative): MappedDerivative => {
-    const token = parseInt(rawDerivative.instrument_token) as DerivativeToken;
-
-    const name = rawDerivative.name as DerivativeName;
-
-    const tradingsymbol =
-      rawDerivative.tradingsymbol as DerivativeTradingsymbol;
-
-    const tradingsymbolParsed = DataService.parseDerivativeTradingSymbol(
-      rawDerivative.tradingsymbol as DerivativeTradingsymbol,
-    );
-
-    const expiry = rawDerivative.expiry as DerivativeExpiry;
-
-    const expiryParsed = DataService.parseExpiry(
-      rawDerivative.expiry,
-    ) as DerivativeExpiryParsed;
-
-    const strike = rawDerivative.strike as StrikePrice;
-
-    const tickSize = rawDerivative.tick_size as DerivativeTickSize;
-
-    const stepSize = 0; // to be calculated while linking
-
-    const lotSize = rawDerivative.lot_size as DerivativeLotSize;
-
-    const instrumentType =
-      rawDerivative.instrument_type as DerivativeInstrumentType;
-
-    const exchange = rawDerivative.exchange as DerivativeExchange;
-
-    const segment = rawDerivative.segment as DerivativeSegment;
-
-    return {
-      token,
-      name,
-      tradingsymbol,
-      tradingsymbolParsed,
-      expiry,
-      stepSize,
-      expiryParsed,
-      strike,
-      tickSize,
-      lotSize,
-      instrumentType,
-      exchange,
-      segment,
-    };
-  }
-
-  private static processEquities = (rawEquities: RawEquity[]) => {
-    rawEquities.forEach((rawEquitie) => {
+  private static processEquities = (rawEquities) => {
+    rawEquities.forEach((rawEquity) => {
       // redundant check
       if (
-        rawEquitie.exchange !== 'NSE' ||
-        rawEquitie.segment !== 'NSE' ||
-        rawEquitie.instrument_type !== 'EQ'
+        rawEquity.exchange !== 'NSE' ||
+        rawEquity.segment !== 'NSE' ||
+        rawEquity.instrument_type !== 'EQ'
       ) {
         return;
       }
 
-      if (!equityTradingsymbolExists(rawEquitie.tradingsymbol)) {
+      if (!equityTradingsymbolExists(rawEquity.tradingsymbol)) {
         return;
       }
 
-      const tokenKey = parseInt(rawEquitie.instrument_token) as EquityToken;
+      const tokenKey = parseInt(rawEquity.instrument_token) as EquityToken;
 
-      const tradingSymbolKey = rawEquitie.tradingsymbol as EquityTradingsymbol;
+      const tradingSymbolKey = rawEquity.tradingsymbol as EquityTradingsymbol;
 
-      const value = DataService.rawEquityToDomain(rawEquitie);
+      const value = DataMapper.Equity.toDomain(rawEquity);
 
       DataService.equitiesTokenReferenceMap.set(tokenKey, value);
 
       DataService.equitiesTradingSymbolReferenceMap.set(tradingSymbolKey, value);
     });
-  }
-
-  static rawEquityToDomain = (rawEquity: RawEquity): MappedEquity => {
-    const token = parseInt(rawEquity.instrument_token) as EquityToken;
-
-    const tradingsymbol = rawEquity.tradingsymbol as EquityTradingsymbol;
-
-    const tickSize = rawEquity.tick_size as EquityTickSize;
-
-    const instrumentType = rawEquity.instrument_type as EquityInstrumentType;
-
-    const exchange = rawEquity.exchange as EquityExchange;
-
-    const segment = rawEquity.segment as EquitySegment;
-
-    return {
-      token,
-      tradingsymbol,
-      tickSize,
-      instrumentType,
-      exchange,
-      segment,
-      calls: [],
-      puts: [],
-    };
   }
 
   private static setFilenamesForToday = () => {
@@ -475,11 +335,6 @@ export class DataService {
 
     DataService.RAW_DERIVATIVES_FILENAME = path.join(__dirname, '..', `${dateString}_raw_derivatives.json`);
     DataService.RAW_EQUITIES_FILENAME = path.join(__dirname, '..', `${dateString}_raw_equities.json`);
-
-    console.log(`set filenames`), {
-      derivatives: DataService.RAW_DERIVATIVES_FILENAME,
-      equities: DataService.RAW_EQUITIES_FILENAME
-    }
   }
 
   static DERRIVATIVE_TRADING_SYMBOL_REGEX =
@@ -704,7 +559,7 @@ export class DataService {
     tradingsymbol: EquityTradingsymbol,
     expiryMonth: ExpiryMonth,
     atmPrice: number,
-  ): MappedDerivative | undefined => {
+  ): Derivative | undefined => {
     const positions = DataService.getAvailableCallOptionsFor(
       tradingsymbol,
       expiryMonth,
@@ -720,8 +575,8 @@ export class DataService {
   public static getAvailableCallOptionsFor = (
     tradingsymbol: EquityTradingsymbol,
     expiryMonth: ExpiryMonth,
-  ): MappedDerivative[] => {
-    const callOptions: Array<MappedDerivative> = [];
+  ): Derivative[] => {
+    const callOptions: Array<Derivative> = [];
 
     const calls =
       DataService.equitiesTradingSymbolReferenceMap.get(tradingsymbol).calls;

@@ -1,6 +1,5 @@
 export const EQ_DE_MAP: Record<EquityTradingsymbol, DerivativeName> = {
-  ASIANPAINT: 'ASIANPAINT',
-  NESTLEIND: 'NESTLEIND',
+  TITAN: 'TITAN',
   ITC: 'ITC',
 };
 
