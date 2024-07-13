@@ -9,7 +9,7 @@ import { LiveService, Tick } from 'src/live/live.service';
 import { PortfolioService } from 'src/portfolio/portfolio.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { LedgersService } from 'src/ledger/ledger.service';
-import { Position } from 'src/portfolio/positions/positions';
+import { DerivativePosition, Position } from 'src/portfolio/positions/positions';
 import {
   ExecuteOrderDto,
   OrderManagerService,
@@ -28,27 +28,26 @@ export class StrategyService {
 
   private executionContext:
     | {
-        equityToken: EquityToken;
-        equityLTP: number;
-        currentMonth: ExpiryMonth;
-        equityInfo: MappedEquity;
-        existingCallOptions: Position[];
-        availableOTMCallOption: MappedDerivative;
-        strategyTag: OrderTag;
-        orders: ExecuteOrderDto[];
-        cash: number;
-        target: number;
-      }
+      equityToken: EquityToken;
+      equityLTP: number;
+      currentMonth: ExpiryMonth;
+      equityInfo: MappedEquity;
+      existingCallOptions: DerivativePosition[];
+      availableOTMCallOption: MappedDerivative;
+      strategyTag: OrderTag;
+      orders: ExecuteOrderDto[];
+      cash: number;
+      target: number;
+    }
     | undefined = undefined;
 
   constructor(
     private readonly liveService: LiveService,
     private readonly apiService: ApiService,
-    private readonly dataService: DataService,
     private readonly portfolioService: PortfolioService,
     private readonly ledgerService: LedgersService,
     private readonly orderManagerService: OrderManagerService,
-  ) {}
+  ) { }
 
   initialize = async () => {
     this.portfolioService
@@ -79,9 +78,9 @@ export class StrategyService {
   }
 
   shouldMakeDecision = ({ price, token }: Tick): boolean => {
-    const positions = this.portfolioService.getPositions();
+    const positions = this.portfolioService.getOpenDerivativePositions();
 
-    const equity = this.dataService.getEquityInfoFromToken(token);
+    const equity = DataService.getEquityInfoFromToken(token);
 
     // which position are we going to check?
     // whose underlying is equity
@@ -101,7 +100,7 @@ export class StrategyService {
     if (
       price >
       DataService.parseDerivativeTradingSymbol(position.tradingsymbol).strike +
-        position.averagePrice
+      position.averagePrice
     ) {
       return true;
     }
@@ -114,7 +113,7 @@ export class StrategyService {
   }
 
   private tooCloseToExpiry = () => {
-    return this.dataService.hasNDaysToExpiry(
+    return DataService.hasNDaysToExpiry(
       this.executionContext.availableOTMCallOption.tradingsymbol,
       3,
     );
@@ -158,7 +157,7 @@ export class StrategyService {
   }
 
   private updateStrategyContext = async ({ token, price }: Tick) => {
-    const equityInfo = this.dataService.getEquityInfoFromToken(token);
+    const equityInfo = DataService.getEquityInfoFromToken(token);
     const month = DataService.getToday().month;
 
     this.executionContext = {
@@ -171,7 +170,7 @@ export class StrategyService {
           equityInfo.tradingsymbol,
           month,
         ),
-      availableOTMCallOption: this.dataService.getAvailableOTMCallOptionFor(
+      availableOTMCallOption: DataService.getAvailableOTMCallOptionFor(
         equityInfo.tradingsymbol,
         DataService.getToday().month,
         price,
@@ -184,9 +183,7 @@ export class StrategyService {
   }
 
   private isTriggerHit = () => {
-    const { strike } = DataService.parseDerivativeTradingSymbol(
-      this.executionContext.existingCallOptions[0].tradingsymbol,
-    );
+    const strike = this.executionContext.existingCallOptions[0].strike
 
     const premium = this.executionContext.existingCallOptions[0].averagePrice;
 
@@ -266,7 +263,7 @@ export class StrategyService {
 
     const quantity = Math.ceil(
       (this.executionContext.target - this.executionContext.cash) /
-        this.executionContext.equityLTP,
+      this.executionContext.equityLTP,
     );
 
     const newOrder: ExecuteOrderDto = {
