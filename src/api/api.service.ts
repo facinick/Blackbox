@@ -3,9 +3,15 @@ import { KiteConnect, KiteTicker } from 'kiteconnect';
 import { ZOrderUpdate, ZTick } from 'src/live/live.service';
 import { DataService } from 'src/data/data.service';
 import { ConfigService } from '@nestjs/config';
+import { HoldingsApiPort } from 'src/portfolio/holdings/holdings.api.port';
+import { HoldingsMapper } from 'src/portfolio/holdings/holdings.zerodha.mapper';
+import { BalancesMapper } from 'src/portfolio/balances/balances.zerodha.mapper';
+import { BalancesApiPort } from 'src/portfolio/balances/balances.api.port';
+import { PositionsMapper } from 'src/portfolio/positions/positions.zerodha.mapper';
+import { PositionsApiPort } from 'src/portfolio/positions/positions.api.port';
 
 @Injectable()
-export class ApiService {
+export class ApiService implements HoldingsApiPort, BalancesApiPort, PositionsApiPort {
   private kc: KiteConnect;
   private ticker: KiteTicker | undefined;
 
@@ -97,10 +103,8 @@ export class ApiService {
     return this.kc.getInstruments(KiteConnect['EXCHANGE_NFO']);
   }
 
-  async getBalance() {
-    const zBalance = await this.kc.getMargins(KiteConnect['MARGIN_EQUITY'])
-    const balance = BalancesMapper.toDomain(zBalance)
-    return balance
+  async getMargins() {
+    return await this.kc.getMargins(KiteConnect['MARGIN_EQUITY']);
   }
 
   async generateSession(requestToken: string, api_secret: string) {
