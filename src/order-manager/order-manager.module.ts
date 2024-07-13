@@ -12,6 +12,7 @@ import {
 } from './order-manager.service';
 import { DataModule } from 'src/data/data.module';
 import { PRICE_ADJUSTMENT_STRATEGY } from './price-adjustment/price-adjustment.strategy';
+import { AppLogger } from 'src/logger/logger.service';
 
 const orderHandlerFactory = {
   provide: 'OrderHandlerFactory',
@@ -20,6 +21,7 @@ const orderHandlerFactory = {
     dataService: DataService,
     eventEmitter: EventEmitter2,
     priceAdjustmentStrategy: PriceAdjustmentStrategy,
+    logger: AppLogger,
   ) => {
     return (orderRequest: OrderRequest) => {
       return new OrderHandler(
@@ -27,7 +29,7 @@ const orderHandlerFactory = {
         apiService,
         eventEmitter,
         priceAdjustmentStrategy,
-        dataService,
+        logger
       );
     };
   },

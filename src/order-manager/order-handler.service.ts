@@ -2,10 +2,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { ApiService } from 'src/api/api.service';
 import { DataService } from 'src/data/data.service';
-import { OrderUpdate } from 'src/live/live.service';
+import { LiveService, OrderUpdate } from 'src/live/live.service';
 import { OrderRequest, PriceAdjustmentStrategy } from './order-manager.service';
 import { PRICE_ADJUSTMENT_STRATEGY } from './price-adjustment/price-adjustment.strategy';
 import { withRetry, clamp } from 'src/utils';
+import { AppLogger } from 'src/logger/logger.service';
 
 /*
 emits:
@@ -16,6 +17,13 @@ order-handler.done (brokerOrderId, orderRequest)
 
 @Injectable()
 class OrderHandler {
+
+  public static Events = {
+    OrderHandlerInitial: "order-handler.initial",
+    OrderHandlerUnknown: "order-handler.unknown",
+    OrderHandlerDone: "order-handler.done"
+  }
+
   // placed orders will have this not undefined
   private brokerOrderId: string;
   // retry with price adjustments
@@ -39,9 +47,10 @@ class OrderHandler {
     private readonly eventEmitter: EventEmitter2,
     @Inject(PRICE_ADJUSTMENT_STRATEGY)
     private readonly priceAdjustment: PriceAdjustmentStrategy,
-    private readonly dataService: DataService,
+    private readonly logger: AppLogger
   ) {
     this.lastPrice = orderRequest.price;
+    this.logger.setContext(this.constructor.name)
   }
 
   public async execute() {
@@ -133,7 +142,7 @@ class OrderHandler {
     return cappedNextPrice;
   }
 
-  @OnEvent('order.completed')
+  @OnEvent(LiveService.Events.OrderUpdateOrderComplete)
   onOrderCompletedEvent(update: OrderUpdate) {
     if (!(update.brokerOrderId === this.brokerOrderId)) {
       return;
@@ -143,7 +152,7 @@ class OrderHandler {
     this.stop();
   }
 
-  @OnEvent('order.rejected')
+  @OnEvent(LiveService.Events.OrderUpdateOrderRejected)
   onOrderRejectedEvent(update: OrderUpdate) {
     if (!(update.brokerOrderId === this.brokerOrderId)) {
       return;
@@ -153,7 +162,7 @@ class OrderHandler {
     this.stop();
   }
 
-  @OnEvent('order.cancelled')
+  @OnEvent(LiveService.Events.OrderUpdateOrderCancelled)
   onOrderCancelledEvent(update: OrderUpdate) {
     if (!(update.brokerOrderId === this.brokerOrderId)) {
       return;
@@ -163,7 +172,7 @@ class OrderHandler {
     this.stop();
   }
 
-  @OnEvent('order.open')
+  @OnEvent(LiveService.Events.OrderUpdateOrderOpen)
   onOrderOpenEvent(update: OrderUpdate) {
     if (!(update.brokerOrderId === this.brokerOrderId)) {
       return;
@@ -171,7 +180,7 @@ class OrderHandler {
   }
 
   // modified or partial filled
-  @OnEvent('order.update')
+  @OnEvent(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete)
   onOrderUpdateEvent(update: OrderUpdate) {
     if (!(update.brokerOrderId === this.brokerOrderId)) {
       return;

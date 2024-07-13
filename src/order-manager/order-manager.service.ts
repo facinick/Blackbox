@@ -1,16 +1,17 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { OrderTag } from './types';
+import {  } from './types';
 import { Inject, Injectable } from '@nestjs/common';
 import { OrderHandler } from './order-handler.service';
 import { AdjustByTick } from './price-adjustment/adjust-by-tick';
 import { PriceAdjustmentStrategy } from './price-adjustment/price-adjustment.strategy';
+import { AppLogger } from 'src/logger/logger.service';
 
 type ExecuteOrderDto = {
   tradingsymbol: Tradingsymbol;
   price: number;
   buyOrSell: BuyOrSell;
   quantity: number;
-  tag: OrderTag;
+  tag: string;
 };
 
 type OrderBookRecord = {
@@ -46,7 +47,10 @@ class OrderManagerService {
     private readonly orderHandlerFactory: (
       orderRequest: OrderRequest,
     ) => OrderHandler,
-  ) {}
+    private readonly logger: AppLogger
+  ) {
+    this.logger.setContext(this.constructor.name)
+  }
   private readonly orderBasket: Set<OrderRequest> = new Set();
   private readonly orderHandlers: Map<string, OrderHandler> = new Map();
 
@@ -61,6 +65,7 @@ class OrderManagerService {
     this.initializeOrderBasket(orderDtos); // Initialize order basket with provided orders
 
     // ensure all orders reach completion
+    this.logger.log(`executing orders:`, this.orderBasket)
     await Promise.allSettled(
       Array.from(this.orderBasket).map((orderRequest) => {
         return new Promise((resolve, reject) => {
@@ -71,7 +76,7 @@ class OrderManagerService {
             this.eventEmitter.on('order-handler.done', resolve);
             handler.execute();
           } catch (error) {
-            console.error(error);
+            this.logger.error("failed to create order handler", error)
             reject(error);
           }
         });
