@@ -13,7 +13,7 @@ export class LiveService {
     OrderUpdateOrderRejected: "live.order.rejected",
     OrderUpdateOrderComplete: "live.order.complete",
     OrderUpdateOrderModifiedOrPartialComplete: "live.order.modifiedOrPartial",
-    Tick: "live.tick"
+    Ticks: "live.ticks"
   }
 
   private subscribedTokens: Set<EquityToken | DerivativeToken> = new Set();
@@ -100,7 +100,7 @@ export class LiveService {
   }
 
   private handleTick = (ticks: Tick[]) => {
-    this.eventEmitter.emit(LiveService.Events.OrderUpdateOrderRejected, ticks);
+    this.eventEmitter.emit(LiveService.Events.Ticks, ticks);
   }
 
   // websocket stuff
