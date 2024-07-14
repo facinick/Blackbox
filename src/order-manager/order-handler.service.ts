@@ -2,11 +2,12 @@ import { Injectable, Inject } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { ApiService } from 'src/api/api.service';
 import { DataService } from 'src/data/data.service';
-import { LiveService, OrderUpdate } from 'src/live/live.service';
+import { LiveService } from 'src/live/live.service';
 import { OrderRequest, PriceAdjustmentStrategy } from './order-manager.service';
 import { PRICE_ADJUSTMENT_STRATEGY } from './price-adjustment/price-adjustment.strategy';
 import { withRetry, clamp } from 'src/utils';
 import { AppLogger } from 'src/logger/logger.service';
+import { OrderUpdate } from 'src/live/live';
 
 /*
 emits:
@@ -134,7 +135,7 @@ class OrderHandler {
   private async modifyOrder() {
     const cappedNextPrice = await this.getNextPriceClamped();
 
-    await this.apiService.modifyPrice({
+    await this.apiService.modifyOrderPrice({
       orderId: this.brokerOrderId,
       price: cappedNextPrice,
     });
