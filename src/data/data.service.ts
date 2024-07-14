@@ -120,7 +120,13 @@ export class DataService {
   }
 
   public static getEquityInfoFromToken = (equityToken: EquityToken) => {
+    console.log(`getting equity from token: ${equityToken}`)
     return DataService.equitiesTokenReferenceMap.get(equityToken);
+  }
+
+  public static getEquityInfoFromTradingsymbol = (tradingsymbol: EquityTradingsymbol) => {
+    console.log(`getting equity from symbol: ${tradingsymbol}`)
+    return DataService.equitiesTradingSymbolReferenceMap.get(tradingsymbol);
   }
 
   public static getDerivativeInfoFromToken = (derivativeToken: DerivativeToken) => {
@@ -457,7 +463,7 @@ export class DataService {
     );
   }
 
-  public static hasNDaysToExpiry = (tradingSymbol: DerivativeTradingsymbol, n: number) => {
+  public static hasNPlusDaysToExpiry = (tradingSymbol: DerivativeTradingsymbol, n: number) => {
     const today = DataService.getToday();
 
     const derivativeData =
@@ -485,7 +491,7 @@ export class DataService {
     // Convert milliseconds to days
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-    return daysDiff === n;
+    return daysDiff >= n;
   }
 
   public static  isPutOption = (tradingSymbol: DerivativeTradingsymbol) => {
