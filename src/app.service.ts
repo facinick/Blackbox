@@ -27,7 +27,7 @@ export class AppService {
   async initialize() {
     await this.dataService.initialize();
     this.logger.log(`Data service initialised`)
-    // await this.liveService.initialize();
+    await this.liveService.initialize();
     this.logger.log(`live service initialized`)
     await this.portfolioService.initialize();
     this.logger.log(`portfolio service initialized`)

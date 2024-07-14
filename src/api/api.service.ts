@@ -124,28 +124,29 @@ export class ApiService implements
 
   getHoldings = async () => {
     const zHoldings = await this.kc.getHoldings()
-    this.logger.debug(`fetched holdings from broker:`,zHoldings)
+    // this.logger.debug(`fetched holdings from broker:`,zHoldings)
     const holdings = zHoldings.map(HoldingsMapper.toDomain)
     return holdings
   }
 
   getNetPositions = async () => {
     const zPositions = await this.kc.getPositions()
-    this.logger.debug(`fetched positions from broker:`,zPositions)
+    // this.logger.debug(`fetched positions from broker:`,zPositions)
     const Positions = zPositions.net.map(PositionsMapper.toDomain)
     return Positions
   }
 
   getTradableEquities = async () => {
     const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NSE'])
-    this.logger.debug(`fetched tradable eq instruments from broker:`)
+    // this.logger.debug(`fetched tradable eq instruments from broker:`)
+    console.log(zInstruments)
     const instruments = zInstruments.map(InstrumentMapper.toDomain)
     return instruments
   }
 
   getTradableDerivatives = async () => {
     const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NFO'])
-    this.logger.debug(`fetched tradable eq instruments from broker:`)
+    // this.logger.debug(`fetched tradable eq instruments from broker:`)
     const instruments = zInstruments.map(InstrumentMapper.toDomain)
     return instruments
   }

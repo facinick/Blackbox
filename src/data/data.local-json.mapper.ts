@@ -1,14 +1,14 @@
 import { KiteConnect } from "kiteconnect"
-import { Derivative, Equity } from "./data"
+import { Derivative, Equity, Instrument } from "./data"
 import { DataService } from "./data.service"
 
 export const DataMapper = {
     Equity: {
-        toDomain: (equity: Awaited<ReturnType<KiteConnect['getInstruments']>>[number]): Equity => {
-            const token = parseInt(equity.instrument_token) as EquityToken
+        toDomain: (equity: Instrument): Equity => {
+            const token = equity.token as EquityToken
             const tradingsymbol = equity.tradingsymbol as EquityTradingsymbol
-            const tickSize = equity.tick_size as EquityTickSize
-            const instrumentType = equity.instrument_type as EquityInstrumentType
+            const tickSize = equity.tickSize as EquityTickSize
+            const instrumentType = equity.instrumentType as EquityInstrumentType
             const exchange = equity.exchange as EquityExchange
             const segment = equity.segment as EquitySegment
         
@@ -25,8 +25,8 @@ export const DataMapper = {
         }
     },
     Derivative: {
-        toDomain: (derivative: Awaited<ReturnType<KiteConnect['getInstruments']>>[number]): Derivative => {
-            const token = parseInt(derivative.instrument_token) as DerivativeToken
+        toDomain: (derivative: Instrument): Derivative => {
+            const token = derivative.token as DerivativeToken
             const name = derivative.name as DerivativeName
             const tradingsymbol = derivative.tradingsymbol as DerivativeTradingsymbol
             const tradingsymbolParsed = DataService.parseDerivativeTradingSymbol(
@@ -37,10 +37,10 @@ export const DataMapper = {
                 String(derivative.expiry),
             ) as DerivativeExpiryParsed
             const strike = derivative.strike as StrikePrice
-            const tickSize = derivative.tick_size as DerivativeTickSize
+            const tickSize = derivative.tickSize as DerivativeTickSize
             const stepSize = 0 // to be calculated while linking
-            const lotSize = derivative.lot_size as DerivativeLotSize
-            const instrumentType = derivative.instrument_type as DerivativeInstrumentType
+            const lotSize = derivative.lotSize as DerivativeLotSize
+            const instrumentType = derivative.instrumentType as DerivativeInstrumentType
             const exchange = derivative.exchange as DerivativeExchange
             const segment = derivative.segment as DerivativeSegment
         

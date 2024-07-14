@@ -1,10 +1,11 @@
+import { DataService } from "src/data/data.service";
 import { DerivativePosition, Position } from "./Positions";
 
 export const openDerivativePositionsFilter = (position: Position): boolean => {
     return (
-      (position.exchange === 'BFO' || position.exchange === 'NFO') &&
-      position.product === 'NRML' &&
-      position.quantity !== 0
+      (position.quantity !== 0 &&
+      DataService.hasDerivativeInfo(position.tradingsymbol as DerivativeTradingsymbol)
+      )
     );
   };
 

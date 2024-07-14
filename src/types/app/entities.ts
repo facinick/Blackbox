@@ -1,6 +1,6 @@
 type StrikePrice = number;
 type InstrumentType = 'CE' | 'PE' | 'EQ' | 'FUT'
-type Segment = 'NFO_OPT' | 'NSE' | 'BFO_OPT' | 'BSE';
+type Segment = 'NFO-OPT' | 'NSE' | 'BFO-OPT' | 'BSE';
 type Exchange = 'NFO' | 'NSE' | 'BFO' | 'BSE' | 'CDS' | 'BCD' | 'MCX'
 type Product = 'NRML' | 'CNC';
 type ExpiryMonth =
