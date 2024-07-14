@@ -4,7 +4,7 @@ import { PositionsService } from './positions/positions.service';
 import { BalancesService } from './balances/balances.service';
 import { getDerivativeNameByEquityTradingsymbol } from 'src/data/eq_de_map';
 import { AppLogger } from 'src/logger/logger.service';
-import { OnEvent } from '@nestjs/event-emitter';
+import { Holding } from './holdings/holdings';
 
 @Injectable()
 export class PortfolioService {
@@ -64,10 +64,21 @@ export class PortfolioService {
     return this.holdingsService.getHoldings();
   }
 
-  getHoldingsForEquity = (tradingsymbol: EquityTradingsymbol) => {
-    return this.holdingsService
-      .getHoldings()
-      .filter((holding) => holding.tradingsymbol === tradingsymbol);
+  // todo: can this have more than one element for same trading symbol?
+  getHoldingQuantityForEquity = (tradingsymbol: EquityTradingsymbol): Holding['quantity'] => {
+
+    const holdings = this.holdingsService
+    .getHoldings()
+    .filter((holding) => holding.tradingsymbol === tradingsymbol)
+
+    if(holdings.length === 1) {
+      return holdings[0].quantity
+    } else if (holdings.length === 0) {
+      return 0
+    } else {
+      this.logger.error(`multiple holdings for ${tradingsymbol}`, holdings)
+      throw new Error(`multiple holdings for ${tradingsymbol}`)
+    }
   }
 
   getPositions = () => {
@@ -76,6 +87,27 @@ export class PortfolioService {
 
   getOpenDerivativePositions = () => {
     return this.positionsService.getOpenDerivativePositions();
+  }
+
+  getOpenCESellPositionForEquity = (tradingsymbol: EquityTradingsymbol) => {
+    const allPositions = this.getOpenDerivativePositions()
+    const ceSellPositions = allPositions.filter(position => {
+      if (position.quantity < 0 &&
+        position.instrumentType === 'CE' &&
+        position.name === getDerivativeNameByEquityTradingsymbol(tradingsymbol)
+      )
+        position
+    })
+
+    if(ceSellPositions.length === 0) {
+      return ceSellPositions[0]
+    } else if(ceSellPositions.length === 0) {
+      return null
+    } else {
+      this.logger.error(`multiple ce sell positions for ${tradingsymbol}`, ceSellPositions)
+      throw new Error(`multiple holdings for ${tradingsymbol}`)
+    }
+
   }
 
   getBalances = () => {
