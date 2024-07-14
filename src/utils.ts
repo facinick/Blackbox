@@ -46,6 +46,17 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+function throttle(func: (...args: any[]) => void, limit: number): (...args: any[]) => void {
+  let inThrottle: boolean;
+  return function(...args: any[]) {
+    if (!inThrottle) {
+      func(...args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  }
+}
+
 async function sleep(durationMs: number) {
   return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
@@ -57,4 +68,5 @@ export {
   aNotInB,
   withRetry,
   clamp,
+  throttle
 };
