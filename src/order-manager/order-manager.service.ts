@@ -1,5 +1,4 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {  } from './types';
 import { Inject, Injectable } from '@nestjs/common';
 import { OrderHandler } from './order-handler.service';
 import { AdjustByTick } from './price-adjustment/adjust-by-tick';

@@ -18,7 +18,6 @@ const orderHandlerFactory = {
   provide: 'OrderHandlerFactory',
   useFactory: (
     apiService: ApiService,
-    dataService: DataService,
     eventEmitter: EventEmitter2,
     priceAdjustmentStrategy: PriceAdjustmentStrategy,
     logger: AppLogger,
