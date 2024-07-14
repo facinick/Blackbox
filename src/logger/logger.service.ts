@@ -16,7 +16,7 @@ export class AppLogger extends Logger {
         }
     }
 
-    error = (message: string, data?: string) => {
+    error = (message: string, data?: any) => {
         const timestamp = Date.now()
         if(data) {
             super.error(`[${timestamp}] ${message}`, data);
