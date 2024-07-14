@@ -1,17 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { OrderUpdate } from 'src/live/live.service';
+import { Inject, Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Trade } from './ledger';
-import { LedgerStorePort } from './ledger.store.port';
+import { LEDGER_STORE_PORT, LedgerStorePort } from './ledger.store.port';
 import { randomUUID } from 'crypto';
+import { OrderUpdate } from 'src/live/live';
+import { LiveService } from 'src/live/live.service';
+import { AppLogger } from 'src/logger/logger.service';
 
 @Injectable()
 export class LedgersService {
   private trades: Trade[];
 
   constructor(
-    private readonly storage: LedgerStorePort
-  ) {}
+    @Inject(LEDGER_STORE_PORT)
+    private readonly storage: LedgerStorePort,
+    private readonly logger: AppLogger
+  ) {
+    this.logger.setContext(this.constructor.name)
+  }
 
   async initialize() {
     await this.syncLedger();
@@ -26,7 +32,7 @@ export class LedgersService {
   }
 
   public getTradesByTag(tag: string) {
-    return this.trades.filter(trade => trade.tag === tag)
+    return this.trades.filter(trade => trade.tag.startsWith(tag))
   }
 
   // mutation, after this make sure to load ledger again
@@ -41,13 +47,31 @@ export class LedgersService {
     }
   }
 
-  @OnEvent('order.completed')
-  private onOrderCompletedEvent(update: OrderUpdate) {
-    // this.addRecord({
-    //     ...update,
-    //     id: update.brokerOrderId,
-    //     instrumentType: update.
-    //     segment: 'NFO_OPT'
-    // })
+
+  /*
+    brokerOrderId: string;
+    status: OrderStatus;
+    tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol;
+    token: EquityToken | DerivativeToken;
+    buyOrSell: BuyOrSell;
+    quantity: number;
+    pendingQuantity: number;
+    filledQuantity: number;
+    unfilledQuantity: number;
+    cancelledQuantity: number;
+    price: number;
+    exchange: Exchange;
+    // only in case of complete order
+    averagePrice: number;
+    tag: string;
+  */
+  @OnEvent(LiveService.Events.OrderUpdateOrderComplete)
+  private onOrderCompleteEvent(update: OrderUpdate) {
+    this.logger.log(`order complete`, update)
+  }
+
+  @OnEvent(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete)
+  private onOrderModifiedOrPartialCompleteEvent(update: OrderUpdate) {
+    this.logger.log(`order partial update`, update)
   }
 }

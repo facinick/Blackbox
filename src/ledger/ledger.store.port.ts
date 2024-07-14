@@ -6,6 +6,9 @@ interface LedgerStorePort {
     getTradesByTag: (tag: string) => Promise<Trade[]>
 }
 
+const LEDGER_STORE_PORT = Symbol('LedgerStorePort');
+
 export {
-    LedgerStorePort
+    LedgerStorePort,
+    LEDGER_STORE_PORT
 }
