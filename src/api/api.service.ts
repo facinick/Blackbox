@@ -16,6 +16,8 @@ import { InstrumentMapper } from 'src/data/data.zerodha.mapper';
 import { LiveMapper, ZOrderUpdate, ZTick } from 'src/live/live.zerodha.mapper';
 import { OrderUpdate, Tick } from 'src/live/live';
 import { LiveApiPort } from 'src/live/live.api.port';
+import { QuotesMapper } from 'src/strategy/quotes.zerodha.mapper';
+import { QuotesApiPort } from 'src/strategy/quotes.api.port';
 
 @Injectable()
 export class ApiService implements 
@@ -24,7 +26,8 @@ export class ApiService implements
     PositionsApiPort, 
     OrderApiPort, 
     DataApiPort, 
-    LiveApiPort {
+    LiveApiPort,
+    QuotesApiPort {
   
   private kc: KiteConnect;
   private ticker: KiteTicker | undefined;
@@ -64,18 +67,18 @@ export class ApiService implements
     this.ticker.on('noreconnect', this._onNoreconnect)
   }
 
-  async cancelOrder(cancelOrderDto: { orderId: string }) {
+  cancelOrder = async (cancelOrderDto: { orderId: string }) => {
     const { orderId } = cancelOrderDto;
 
     return (await this.kc.cancelOrder(KiteConnect['VARIETY_REGULAR'], orderId))
       .order_id;
   }
 
-  async placeOrder(placeOrderDto: {
+  placeOrder = async (placeOrderDto: {
     tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol;
     buyOrSell: BuyOrSell;
     quantity: number;
-  }): Promise<string> {
+  }): Promise<string> => {
     const { tradingsymbol, buyOrSell, quantity } = placeOrderDto;
 
     let exchange, product;
@@ -103,13 +106,13 @@ export class ApiService implements
     ).order_id;
   }
 
-  async getOrders() {
+  getOrders = async () => {
     const zOrders = await this.kc.getOrders()
     const orders = zOrders.map(OrdersMapper.toDomain)
     return orders
   }
 
-  async modifyOrderPrice(modifyPriceDto: { orderId: string; price: number }) {
+  modifyOrderPrice = async (modifyPriceDto: { orderId: string; price: number }) =>  {
     const { orderId, price } = modifyPriceDto;
 
     return (
@@ -133,62 +136,62 @@ export class ApiService implements
     return Positions
   }
 
-  async getTradableEquities() {
+  getTradableEquities = async () => {
     const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NSE'])
     this.logger.debug(`fetched tradable eq instruments from broker:`)
     const instruments = zInstruments.map(InstrumentMapper.toDomain)
     return instruments
   }
 
-  async getTradableDerivatives() {
+  getTradableDerivatives = async () => {
     const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NFO'])
     this.logger.debug(`fetched tradable eq instruments from broker:`)
     const instruments = zInstruments.map(InstrumentMapper.toDomain)
     return instruments
   }
 
-  async getBalance() {
+  getBalance = async () => {
     const zBalance = await this.kc.getMargins(KiteConnect['MARGIN_EQUITY'])
     this.logger.debug(`fetched balance from broker:`,zBalance)
     const balance = BalancesMapper.toDomain(zBalance)
     return balance
   }
 
-  async generateSession(requestToken: string, api_secret: string) {
+  generateSession = async (requestToken: string, api_secret: string) => {
     return await this.kc.generateSession(requestToken, api_secret);
   }
 
-  async invalidateAccessToken(accessToken: string) {
+  invalidateAccessToken = async (accessToken: string) => {
     return this.kc.invalidateAccessToken(accessToken);
   }
 
-  async invalidateRefreshToken(refreshToken: string) {
+  invalidateRefreshToken = async (refreshToken: string) => {
     return this.kc.invalidateRefreshToken(refreshToken);
   }
 
-  async getLoginURL() {
+  getLoginURL = async () => {
     return await this.kc.getLoginURL();
   }
 
-  async getStockLtp(tradingSymbol: EquityTradingsymbol) {
-    return await this.kc.getLTP(
-      `${KiteConnect['EXCHANGE_NSE']}:${tradingSymbol}`,
-    );
+  getStockLtp = async (tradingSymbols: Array<EquityTradingsymbol>) => {
+    const instruments = tradingSymbols.map(tradingSymbol => `${KiteConnect['EXCHANGE_NSE']}:${tradingSymbol}`)
+    const quotes = await this.kc.getLTP(instruments)
+    return QuotesMapper.toDomain(quotes)
   }
 
-  async getDerivativeLtp(tradingSymbol: DerivativeTradingsymbol) {
-    return await this.kc.getLTP(
-      `${KiteConnect['EXCHANGE_NFO']}:${tradingSymbol}`,
-    );
+  getDerivativeLtp = async (tradingSymbols: Array<DerivativeTradingsymbol>) => {
+    const instruments = tradingSymbols.map(tradingSymbol => `${KiteConnect['EXCHANGE_NFO']}:${tradingSymbol}`)
+    const quotes = await this.kc.getLTP(instruments)
+    return QuotesMapper.toDomain(quotes)
   }
 
-  // async getLtp(tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol, )
+  // getLtp = async (tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol, => )
 
-  async renewAccessToken(refresh_token: string, api_secret: string) {
+  renewAccessToken = async (refresh_token: string, api_secret: string) => {
     return await this.kc.renewAccessToken(refresh_token, api_secret);
   }
 
-  setAccessToken(access_token: string) {
+  setAccessToken = (access_token: string) => {
     this.kc.setAccessToken(access_token);
   }
 
@@ -196,23 +199,23 @@ export class ApiService implements
    * Websocket stuff
    */
 
-  connectTicker() {
+  connectTicker = () => {
     this.ticker.connect();
   }
 
-  subscribeTicker(tokens: Array<DerivativeToken | EquityToken>) {
+  subscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
     this.ticker.subscribe(tokens);
   }
 
-  unsubscribeTicker(tokens: Array<DerivativeToken | EquityToken>) {
+  unsubscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
     this.ticker.unsubscribe(tokens);
   }
 
-  isConnected() {
+  isConnected = () => {
     return this.ticker.connected();
   }
 
-  disconnectTicker() {
+  disconnectTicker = () => {
     this.ticker.disconnect();
   }
 
