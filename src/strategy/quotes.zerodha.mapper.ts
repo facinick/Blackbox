@@ -1,19 +1,22 @@
-import { KiteConnect } from "kiteconnect";
-import { Tick } from "src/live/live";
+import { KiteConnect } from 'kiteconnect';
+import { Tick } from 'src/live/live';
 
 export const QuotesMapper = {
-    toDomain: (zQuote: Awaited<ReturnType<KiteConnect['getLTP']>>): Record<Tradingsymbol, Tick> => {
+  toDomain: (
+    zQuote: Awaited<ReturnType<KiteConnect['getLTP']>>,
+  ): Record<Tradingsymbol, Tick> => {
+    const domainQuotes: Record<string, { price: number; token: number }> = {};
 
-        const domainQuotes: Record<string, { price: number; token: number }> = {};
+    for (const [symbol, data] of Object.entries(zQuote)) {
 
-        for (const [symbol, data] of Object.entries(zQuote)) {
-            domainQuotes[symbol] = {
-                price: data.last_price,
-                token: data.instrument_token,
-            };
-        }
+      const tradingSymbol = symbol.split(":")[1]
 
-        return domainQuotes
-
+      domainQuotes[tradingSymbol] = {
+        price: data.last_price,
+        token: data.instrument_token,
+      };
     }
-}
+
+    return domainQuotes;
+  },
+};
