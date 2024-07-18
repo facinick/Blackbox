@@ -45,156 +45,249 @@ export class ApiService implements
     private readonly configService: ConfigService,
     private readonly logger: AppLogger
   ) {
-    this.kc = new KiteConnect({
-      api_key: configService.get("ZERODHA_API_KEY")
-    });
-    this.logger.setContext(this.constructor.name)
+    try {
+      this.kc = new KiteConnect({
+        api_key: configService.get("ZERODHA_API_KEY")
+      });
+      this.logger.setContext(this.constructor.name);
+    } catch (error) {
+      this.logger.error('Error initializing KiteConnect', error);
+      throw error;
+    }
   }
 
   initializeTicker(accessToken) {
-    this.ticker = new KiteTicker({
-      api_key: this.configService.get("ZERODHA_API_KEY"),
-      access_token: accessToken,
-    });
+    try {
+      this.ticker = new KiteTicker({
+        api_key: this.configService.get("ZERODHA_API_KEY"),
+        access_token: accessToken,
+      });
 
-    this.ticker.on('ticks', this._onTick)
-    this.ticker.on('order_update', this._onOrderUpdate)
-    this.ticker.on('connect', this._onConnect)
-    this.ticker.on('disconnect', this._onDisconnect)
-    this.ticker.on('error', this._onError)
-    this.ticker.on('close', this._onClose)
-    this.ticker.on('reconnect', this._onReconnect)
-    this.ticker.on('noreconnect', this._onNoreconnect)
+      this.ticker.on('ticks', this._onTick)
+      this.ticker.on('order_update', this._onOrderUpdate)
+      this.ticker.on('connect', this._onConnect)
+      this.ticker.on('disconnect', this._onDisconnect)
+      this.ticker.on('error', this._onError)
+      this.ticker.on('close', this._onClose)
+      this.ticker.on('reconnect', this._onReconnect)
+      this.ticker.on('noreconnect', this._onNoreconnect)
+    } catch (error) {
+      this.logger.error('Error initializing ticker', error);
+      throw error;
+    }
   }
 
   cancelOrder = async (cancelOrderDto: { orderId: string }) => {
-    const { orderId } = cancelOrderDto;
-
-    return (await this.kc.cancelOrder('regular', orderId))
-      .order_id;
+    try {
+      const { orderId } = cancelOrderDto;
+      this.logger.debug(`cancel order:`, orderId);
+      const cancelledOrder = await this.kc.cancelOrder('regular', orderId);
+      return cancelledOrder.order_id;
+    } catch (error) {
+      this.logger.error('Error canceling order', error);
+      throw error;
+    }
   }
 
   placeOrder = async (placeOrderDto: {
     tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol;
     buyOrSell: BuyOrSell;
     quantity: number;
-    price: number
+    price: number;
   }): Promise<string> => {
-    const { tradingsymbol, buyOrSell, quantity, price } = placeOrderDto;
+    try {
+      const { tradingsymbol, buyOrSell, quantity, price } = placeOrderDto;
 
-    let exchange, product;
+      let exchange, product;
 
-    if (
-      DataService.isCallOption(tradingsymbol as DerivativeTradingsymbol) ||
-      DataService.isPutOption(tradingsymbol as DerivativeTradingsymbol)
-    ) {
-      exchange = 'NFO';
-      product = 'NRML';
-    } else {
-      exchange = 'NSE';
-      product = 'CNC';
+      if (
+        DataService.isCallOption(tradingsymbol as DerivativeTradingsymbol) ||
+        DataService.isPutOption(tradingsymbol as DerivativeTradingsymbol)
+      ) {
+        exchange = 'NFO';
+        product = 'NRML';
+      } else {
+        exchange = 'NSE';
+        product = 'CNC';
+      }
+
+      const order = {
+        exchange,
+        tradingsymbol,
+        transaction_type: buyOrSell,
+        quantity,
+        product,
+        price,
+        order_type: 'LIMIT',
+      };
+
+      this.logger.debug(`place order:`, order);
+      //@ts-ignore
+      const placedOrder = await this.kc.placeOrder('regular', order);
+      return placedOrder.order_id;
+    } catch (error) {
+      this.logger.error('Error placing order', error);
+      throw error;
     }
-
-    const placedOrder = await this.kc.placeOrder('regular', {
-      exchange,
-      tradingsymbol,
-      transaction_type: buyOrSell,
-      quantity,
-      product,
-      price,
-      order_type: 'LIMIT',
-    })
-
-    return placedOrder.order_id;
   }
 
   getOrders = async () => {
-    const zOrders = await this.kc.getOrders()
-    const orders = zOrders.map(OrdersMapper.toDomain)
-    return orders
+    try {
+      const zOrders = await this.kc.getOrders();
+      const orders = zOrders.map(OrdersMapper.toDomain);
+      return orders;
+    } catch (error) {
+      this.logger.error('Error getting orders', error);
+      throw error;
+    }
   }
 
-  modifyOrderPrice = async (modifyPriceDto: { orderId: string; price: number }) =>  {
-    const { orderId, price } = modifyPriceDto;
-
-    return (
-      await this.kc.modifyOrder('regular', orderId, {
-        price,
-      })
-    ).order_id;
+  modifyOrderPrice = async (modifyPriceDto: { orderId: string; price: number }) => {
+    try {
+      const { orderId, price } = modifyPriceDto;
+      this.logger.debug(`modify order:`, orderId);
+      const modifiedOrder = await this.kc.modifyOrder('regular', orderId, { price });
+      return modifiedOrder.order_id;
+    } catch (error) {
+      this.logger.error('Error modifying order price', error);
+      throw error;
+    }
   }
 
   getHoldings = async () => {
-    const zHoldings = await this.kc.getHoldings()
-    // this.logger.debug(`fetched holdings from broker:`,zHoldings)
-    const holdings = zHoldings.map(HoldingsMapper.toDomain)
-    return holdings
+    try {
+      const zHoldings = await this.kc.getHoldings();
+      this.logger.debug(`fetched holdings from broker:`, zHoldings);
+      const holdings = zHoldings.map(HoldingsMapper.toDomain);
+      return holdings;
+    } catch (error) {
+      this.logger.error('Error getting holdings', error);
+      throw error;
+    }
   }
 
   getNetPositions = async () => {
-    const zPositions = await this.kc.getPositions()
-    // this.logger.debug(`fetched positions from broker:`,zPositions)
-    const Positions = zPositions.net.map(PositionsMapper.toDomain)
-    return Positions
+    try {
+      const zPositions = await this.kc.getPositions();
+      this.logger.debug(`fetched positions from broker:`, zPositions);
+      const Positions = zPositions.net.map(PositionsMapper.toDomain);
+      return Positions;
+    } catch (error) {
+      this.logger.error('Error getting net positions', error);
+      throw error;
+    }
   }
 
   getTradableEquities = async () => {
-    const zInstruments = await this.kc.getInstruments('NSE')
-    // this.logger.debug(`fetched tradable eq instruments from broker:`)
-    const instruments = zInstruments.map(InstrumentMapper.toDomain)
-    return instruments
+    try {
+      const zInstruments = await this.kc.getInstruments('NSE');
+      const instruments = zInstruments.map(InstrumentMapper.toDomain);
+      return instruments;
+    } catch (error) {
+      this.logger.error('Error getting tradable equities', error);
+      throw error;
+    }
   }
 
   getTradableDerivatives = async () => {
-    const zInstruments = await this.kc.getInstruments('NFO')
-    // this.logger.debug(`fetched tradable eq instruments from broker:`)
-    const instruments = zInstruments.map(InstrumentMapper.toDomain)
-    return instruments
+    try {
+      const zInstruments = await this.kc.getInstruments('NFO');
+      const instruments = zInstruments.map(InstrumentMapper.toDomain);
+      return instruments;
+    } catch (error) {
+      this.logger.error('Error getting tradable derivatives', error);
+      throw error;
+    }
   }
 
   getBalance = async () => {
-    const zBalance = await this.kc.getMargins()
-    this.logger.debug(`fetched balance from broker:`,zBalance)
-    const balance = BalancesMapper.toDomain(zBalance)
-    return balance
+    try {
+      const zBalance = await this.kc.getMargins();
+      this.logger.debug(`fetched balance from broker:`, zBalance);
+      const balance = BalancesMapper.toDomain(zBalance);
+      return balance;
+    } catch (error) {
+      this.logger.error('Error getting balance', error);
+      throw error;
+    }
   }
 
   generateSession = async (requestToken: string, api_secret: string) => {
-    return await this.kc.generateSession(requestToken, api_secret);
+    try {
+      return await this.kc.generateSession(requestToken, api_secret);
+    } catch (error) {
+      this.logger.error('Error generating session', error);
+      throw error;
+    }
   }
 
   invalidateAccessToken = async (accessToken: string) => {
-    return this.kc.invalidateAccessToken(accessToken);
+    try {
+      return this.kc.invalidateAccessToken(accessToken);
+    } catch (error) {
+      this.logger.error('Error invalidating access token', error);
+      throw error;
+    }
   }
 
   invalidateRefreshToken = async (refreshToken: string) => {
-    return this.kc.invalidateRefreshToken(refreshToken);
+    try {
+      return this.kc.invalidateRefreshToken(refreshToken);
+    } catch (error) {
+      this.logger.error('Error invalidating refresh token', error);
+      throw error;
+    }
   }
 
   getLoginURL = async () => {
-    return await this.kc.getLoginURL();
+    try {
+      return await this.kc.getLoginURL();
+    } catch (error) {
+      this.logger.error('Error getting login URL', error);
+      throw error;
+    }
   }
 
   getStockLtp = async (tradingSymbols: Array<EquityTradingsymbol>) => {
-    const instruments = tradingSymbols.map(tradingSymbol => `NSE:${tradingSymbol}`)
-    const quotes = await this.kc.getLTP(instruments)
-    return QuotesMapper.toDomain(quotes)
+    try {
+      const instruments = tradingSymbols.map(tradingSymbol => `NSE:${tradingSymbol}`);
+      const quotes = await this.kc.getLTP(instruments);
+      return QuotesMapper.toDomain(quotes);
+    } catch (error) {
+      this.logger.error('Error getting stock LTP', error);
+      throw error;
+    }
   }
 
   getDerivativeLtp = async (tradingSymbols: Array<DerivativeTradingsymbol>) => {
-    const instruments = tradingSymbols.map(tradingSymbol => `NFO:${tradingSymbol}`)
-    const quotes = await this.kc.getLTP(instruments)
-    return QuotesMapper.toDomain(quotes)
+    try {
+      const instruments = tradingSymbols.map(tradingSymbol => `NFO:${tradingSymbol}`);
+      const quotes = await this.kc.getLTP(instruments);
+      return QuotesMapper.toDomain(quotes);
+    } catch (error) {
+      this.logger.error('Error getting derivative LTP', error);
+      throw error;
+    }
   }
 
   // getLtp = async (tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol, => )
 
   renewAccessToken = async (refresh_token: string, api_secret: string) => {
-    return await this.kc.renewAccessToken(refresh_token, api_secret);
+    try {
+      return await this.kc.renewAccessToken(refresh_token, api_secret);
+    } catch (error) {
+      this.logger.error('Error renewing access token', error);
+      throw error;
+    }
   }
 
   setAccessToken = (access_token: string) => {
-    this.kc.setAccessToken(access_token);
+    try {
+      this.kc.setAccessToken(access_token);
+    } catch (error) {
+      this.logger.error('Error setting access token', error);
+      throw error;
+    }
   }
 
   /*
@@ -202,119 +295,224 @@ export class ApiService implements
    */
 
   connectTicker = () => {
-    this.ticker.connect();
+    try {
+      this.ticker.connect();
+    } catch (error) {
+      this.logger.error('Error connecting ticker', error);
+      throw error;
+    }
   }
 
   subscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
-    this.ticker.subscribe(tokens);
+    try {
+      this.ticker.subscribe(tokens);
+    } catch (error) {
+      this.logger.error('Error subscribing to ticker', error);
+      throw error;
+    }
   }
 
   unsubscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
-    this.ticker.unsubscribe(tokens);
+    try {
+      this.ticker.unsubscribe(tokens);
+    } catch (error) {
+      this.logger.error('Error unsubscribing from ticker', error);
+      throw error;
+    }
   }
 
   isConnected = () => {
-    return this.ticker.connected();
+    try {
+      return this.ticker.connected();
+    } catch (error) {
+      this.logger.error('Error checking ticker connection status', error);
+      throw error;
+    }
   }
 
   disconnectTicker = () => {
-    this.ticker.disconnect();
+    try {
+      this.ticker.disconnect();
+    } catch (error) {
+      this.logger.error('Error disconnecting ticker', error);
+      throw error;
+    }
   }
 
   registerForPriceUpdates = (func: (ticks: Tick[]) => void) => {
-    if(!this.tickListeners.has(func)) {
-      this.tickListeners.add(func)
+    try {
+      if(!this.tickListeners.has(func)) {
+        this.tickListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for price updates', error);
+      throw error;
     }
   }
 
   private _onTick = (zTicks: ZTick[]) => {
-    this.tickListeners.forEach(listener => {
-      listener(zTicks.map(LiveMapper.Tick.toDomain))
-    });
+    try {
+      this.tickListeners.forEach(listener => {
+        listener(zTicks.map(LiveMapper.Tick.toDomain));
+      });
+    } catch (error) {
+      this.logger.error('Error processing ticks', error);
+      throw error;
+    }
   }
 
   registerForOrderUpdates = (func: (orderUpdate: OrderUpdate) => void) => {
-    if(!this.orderUpdateListeners.has(func)) {
-      this.orderUpdateListeners.add(func)
+    try {
+      if(!this.orderUpdateListeners.has(func)) {
+        this.orderUpdateListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for order updates', error);
+      throw error;
     }
   }
 
   private _onOrderUpdate = (zUpdate: ZOrderUpdate) => {
-    this.orderUpdateListeners.forEach(listener => {
-      listener(LiveMapper.OrderUpdate.toDomain(zUpdate))
-    });
+    try {
+      this.orderUpdateListeners.forEach(listener => {
+        listener(LiveMapper.OrderUpdate.toDomain(zUpdate));
+      });
+    } catch (error) {
+      this.logger.error('Error processing order update', error);
+      throw error;
+    }
   }
 
   registerForConnect = (func: () => void) => {
-    if(!this.wsConnectListeners.has(func)) {
-      this.wsConnectListeners.add(func)
+    try {
+      if(!this.wsConnectListeners.has(func)) {
+        this.wsConnectListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for connect event', error);
+      throw error;
     }
   }
 
   private _onConnect = () => {
-    this.wsConnectListeners.forEach(listener => {
-      listener()
-    });
+    try {
+      this.wsConnectListeners.forEach(listener => {
+        listener();
+      });
+    } catch (error) {
+      this.logger.error('Error processing connect event', error);
+      throw error;
+    }
   }
 
   registerForDisconnect = (func: (error: any) => void) => {
-    if(!this.wsDisconnectListeners.has(func)) {
-      this.wsDisconnectListeners.add(func)
+    try {
+      if(!this.wsDisconnectListeners.has(func)) {
+        this.wsDisconnectListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for disconnect event', error);
+      throw error;
     }
   }
 
   private _onDisconnect = (error: any) => {
-    this.wsDisconnectListeners.forEach(listener => {
-      listener(error)
-    });
+    try {
+      this.wsDisconnectListeners.forEach(listener => {
+        listener(error);
+      });
+    } catch (error) {
+      this.logger.error('Error processing disconnect event', error);
+      throw error;
+    }
   }
 
   registerForError = (func: (error: any) => void) => {
-    if(!this.wsErrorListeners.has(func)) {
-      this.wsErrorListeners.add(func)
+    try {
+      if(!this.wsErrorListeners.has(func)) {
+        this.wsErrorListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for error event', error);
+      throw error;
     }
   }
 
   private _onError = (error) => {
-    this.wsErrorListeners.forEach(listener => {
-      listener(error)
-    });
+    try {
+      this.wsErrorListeners.forEach(listener => {
+        listener(error);
+      });
+    } catch (error) {
+      this.logger.error('Error processing error event', error);
+      throw error;
+    }
   }
 
   registerForClose = (func: () => void) => {
-    if(!this.wsCloseListeners.has(func)) {
-      this.wsCloseListeners.add(func)
+    try {
+      if(!this.wsCloseListeners.has(func)) {
+        this.wsCloseListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for close event', error);
+      throw error;
     }
   }
 
   private _onClose = () => {
-    this.wsCloseListeners.forEach(listener => {
-      listener()
-    });
+    try {
+      this.wsCloseListeners.forEach(listener => {
+        listener();
+      });
+    } catch (error) {
+      this.logger.error('Error processing close event', error);
+      throw error;
+    }
   }
 
   registerForReconnect = (func: () => void) => {
-    if(!this.wsReconnectListeners.has(func)) {
-      this.wsReconnectListeners.add(func)
+    try {
+      if(!this.wsReconnectListeners.has(func)) {
+        this.wsReconnectListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for reconnect event', error);
+      throw error;
     }
   }
 
   private _onReconnect = () => {
-    this.wsReconnectListeners.forEach(listener => {
-      listener()
-    });
+    try {
+      this.wsReconnectListeners.forEach(listener => {
+        listener();
+      });
+    } catch (error) {
+      this.logger.error('Error processing reconnect event', error);
+      throw error;
+    }
   }
 
   registerForNoreconnect = (func: () => void) => {
-    if(!this.wsNoreconnectListeners.has(func)) {
-      this.wsNoreconnectListeners.add(func)
+    try {
+      if(!this.wsNoreconnectListeners.has(func)) {
+        this.wsNoreconnectListeners.add(func);
+      }
+    } catch (error) {
+      this.logger.error('Error registering for noreconnect event', error);
+      throw error;
     }
   }
 
   private _onNoreconnect = () => {
-    this.wsNoreconnectListeners.forEach(listener => {
-      listener()
-    });
+    try {
+      this.wsNoreconnectListeners.forEach(listener => {
+        listener();
+      });
+    } catch (error) {
+      this.logger.error('Error processing noreconnect event', error);
+      throw error;
+    }
   }
 
 }
