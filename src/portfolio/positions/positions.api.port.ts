@@ -1,9 +1,7 @@
-import { Position } from "./Positions"
+import { Position } from './Positions';
 
 interface PositionsApiPort {
-    getNetPositions: () => Promise<Position[]>
+  getNetPositions: () => Promise<Position[]>;
 }
 
-export {
-    PositionsApiPort
-}
+export { PositionsApiPort };

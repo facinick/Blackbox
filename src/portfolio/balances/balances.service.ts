@@ -66,20 +66,20 @@ export class BalancesService {
     private readonly apiService: ApiService,
     private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
 
   initialize = async () => {
-    this.logger.log(`inintializing balances service`)
+    this.logger.log(`inintializing balances service`);
     await this.syncBalances();
-  }
+  };
 
   syncBalances = async () => {
     this.balance = await this.apiService.getBalance();
-    this.logger.log(`balance updated:`,this.balance)
-  }
+    this.logger.log(`balance updated:`, this.balance);
+  };
 
   getBalances = () => {
     return this.balance;
-  }
+  };
 }

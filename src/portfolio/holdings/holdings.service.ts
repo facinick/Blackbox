@@ -11,20 +11,20 @@ export class HoldingsService {
     private readonly apiService: ApiService,
     private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
 
   initialize = async () => {
-    this.logger.log(`inintializing holdings service`)
+    this.logger.log(`inintializing holdings service`);
     await this.syncHoldings();
-  }
+  };
 
   syncHoldings = async () => {
     this.holdings = await this.apiService.getHoldings();
-    this.logger.log(`holdings updated:`,this.holdings)
-  }
+    this.logger.log(`holdings updated:`, this.holdings);
+  };
 
   getHoldings = () => {
     return this.holdings;
-  }
+  };
 }

@@ -39,9 +39,10 @@ export class DataService {
 
   private static readonly expiries: Array<DerivativeExpiryParsed> = [];
 
-  constructor(private readonly apiService: ApiService) { }
+  constructor(private readonly apiService: ApiService) {}
 
   initialize = async () => {
+    console.log(`setting file names for today`);
     DataService.setFilenamesForToday();
 
     // remove this ************
@@ -51,14 +52,18 @@ export class DataService {
     //   '/Users/facinick/Repositories/blackbox/src/data/jul5_raw_derivatives.json';
     // ************************
 
+    console.log(`load derivatives`);
     await this.loadDerivatives();
+    console.log(`load equities`);
     await this.loadEquities();
+    console.log(`generate calls, puts, step size and expiries.`);
     DataService.linkDerivatives();
     DataService.calculateStepSizeFromCallsAndUpdateDerivatives();
 
+    console.log(`finished initializing`);
     // temporary, delete this after development
     await DataService.saveTransformedDataForInspection();
-  }
+  };
 
   // temporary, delete this after development
   private static saveTransformedDataForInspection = async () => {
@@ -81,11 +86,14 @@ export class DataService {
       '/Users/facinick/Repositories/blackbox/src/data/derivative_symbol_to_derivative.json',
       Object.fromEntries(DataService.derivativesTradingsymbolReferenceMap),
     );
-  }
+  };
 
-  public static getTickSizeForTradingsymbol = (tradingSymbol: Tradingsymbol) => {
+  public static getTickSizeForTradingsymbol = (
+    tradingSymbol: Tradingsymbol,
+  ) => {
     if (DataService.equitiesTradingSymbolReferenceMap.has(tradingSymbol)) {
-      return DataService.equitiesTradingSymbolReferenceMap.get(tradingSymbol).tickSize;
+      return DataService.equitiesTradingSymbolReferenceMap.get(tradingSymbol)
+        .tickSize;
     } else if (
       DataService.derivativesTradingsymbolReferenceMap.has(
         tradingSymbol as DerivativeTradingsymbol,
@@ -99,33 +107,47 @@ export class DataService {
         `trading symbol you're dealing with isnt in the database buddy`,
       );
     }
-  }
+  };
 
   /*
     Only the derivatives and equities information tat exist in our db will be handled by our application
   */
-  public static hasDerivativeInfo = (tradingSymbol: DerivativeTradingsymbol) => {
-    return DataService.derivativesTradingsymbolReferenceMap.has(tradingSymbol)
-  }
+  public static hasDerivativeInfo = (
+    tradingSymbol: DerivativeTradingsymbol,
+  ) => {
+    return DataService.derivativesTradingsymbolReferenceMap.has(tradingSymbol);
+  };
 
   public static hasEquityInfo = (tradingSymbol: EquityTradingsymbol) => {
-    return DataService.equitiesTradingSymbolReferenceMap.has(tradingSymbol)
-  }
+    return DataService.equitiesTradingSymbolReferenceMap.has(tradingSymbol);
+  };
 
   private loadDerivatives = async () => {
-    const rawFileExists = await DataService.fileExists(DataService.RAW_DERIVATIVES_FILENAME);
+    console.debug(`loading derivatives...`);
+    const rawFileExists = await DataService.fileExists(
+      DataService.RAW_DERIVATIVES_FILENAME,
+    );
 
     if (rawFileExists) {
-      // read
-      const rawDerivatives: Instrument[] = (await DataService.readJsonFromFile(
+      console.debug(`found list of available derivates locally, about to read`);
+      const rawDerivatives: Instrument[] = await DataService.readJsonFromFile(
         DataService.RAW_DERIVATIVES_FILENAME,
-      ));
+      );
       // transform and process
-      await DataService.processDerivatives(rawDerivatives);
+      console.debug(
+        `read list of available derivates, about to process and transform`,
+      );
+      DataService.processDerivatives(rawDerivatives);
     } else {
       // fetch
+      console.debug(
+        `couldn't find a list of available derivates locally, about to fetch from server`,
+      );
       const rawDerivatives = await this.apiService.getTradableDerivatives();
       // write
+      console.debug(
+        `fetched the list of available derivates, about to save it locally`,
+      );
       await DataService.writeJsonToFile(
         DataService.RAW_DERIVATIVES_FILENAME,
         rawDerivatives,
@@ -133,21 +155,23 @@ export class DataService {
       // load
       return this.loadDerivatives();
     }
-  }
+  };
 
   public static getEquityInfoFromToken = (equityToken: EquityToken) => {
-    console.log(`getting equity from token: ${equityToken}`)
     return DataService.equitiesTokenReferenceMap.get(equityToken);
-  }
+  };
 
-  public static getEquityInfoFromTradingsymbol = (tradingsymbol: EquityTradingsymbol) => {
-    console.log(`getting equity from symbol: ${tradingsymbol}`)
+  public static getEquityInfoFromTradingsymbol = (
+    tradingsymbol: EquityTradingsymbol,
+  ) => {
     return DataService.equitiesTradingSymbolReferenceMap.get(tradingsymbol);
-  }
+  };
 
-  public static getDerivativeInfoFromToken = (derivativeToken: DerivativeToken) => {
+  public static getDerivativeInfoFromToken = (
+    derivativeToken: DerivativeToken,
+  ) => {
     return DataService.derivativesTokenReferenceMap.get(derivativeToken);
-  }
+  };
 
   public static getDerivativeInfoFromTradingSymbol = (
     tradingSymbol: DerivativeTradingsymbol,
@@ -159,7 +183,7 @@ export class DataService {
     }
 
     throw new Error(`unexpected: cannot find derivative for the given symbol`);
-  }
+  };
 
   public static getDerivativeExpiryInfoFromDerivativeToken(
     derivativeToken: DerivativeToken,
@@ -179,22 +203,35 @@ export class DataService {
     const nStrikesNext = derivativeInfo.strike + derivativeInfo.stepSize * 1;
 
     return nStrikesNext;
-  }
+  };
 
   private loadEquities = async () => {
-    const rawFileExists = await DataService.fileExists(DataService.RAW_EQUITIES_FILENAME);
+    console.debug(`loading equities...`);
+    const rawFileExists = await DataService.fileExists(
+      DataService.RAW_EQUITIES_FILENAME,
+    );
 
     if (rawFileExists) {
       // read
-      const rawEquities: Instrument[] = (await DataService.readJsonFromFile(
+      console.debug(`found list of available equities locally, about to read`);
+      const rawEquities: Instrument[] = await DataService.readJsonFromFile(
         DataService.RAW_EQUITIES_FILENAME,
-      ))
+      );
       // transform and process
-      await DataService.processEquities(rawEquities);
+      console.debug(
+        `read list of available equities, about to process and transform`,
+      );
+      DataService.processEquities(rawEquities);
     } else {
       // fetch
+      console.debug(
+        `couldn't find a list of available equities locally, about to fetch from server`,
+      );
       const rawEquities = await this.apiService.getTradableEquities();
       // write
+      console.debug(
+        `fetched the list of available equities, about to save it locally`,
+      );
       await DataService.writeJsonToFile(
         DataService.RAW_EQUITIES_FILENAME,
         rawEquities,
@@ -202,12 +239,14 @@ export class DataService {
       // load
       return this.loadEquities();
     }
-  }
+  };
 
   private static processDerivatives = (rawDerivatives: Instrument[]) => {
     const uniqueExpiries: Set<string> = new Set();
     rawDerivatives.forEach((rawDerivative) => {
       // redundant check, until we have value objects that can validate in themselves
+
+      // todo: remove this, but also extend app logic to work with multiple exchanges
       if (
         rawDerivative.exchange !== 'NFO' ||
         rawDerivative.segment !== 'NFO-OPT' ||
@@ -220,7 +259,7 @@ export class DataService {
         return;
       }
 
-      const tokenKey = rawDerivative.token
+      const tokenKey = rawDerivative.token;
 
       const tradingSymbolKey =
         rawDerivative.tradingsymbol as DerivativeTradingsymbol;
@@ -229,7 +268,10 @@ export class DataService {
 
       // passing same object reference, to access data using both token and symbol
       DataService.derivativesTokenReferenceMap.set(tokenKey, value);
-      DataService.derivativesTradingsymbolReferenceMap.set(tradingSymbolKey, value);
+      DataService.derivativesTradingsymbolReferenceMap.set(
+        tradingSymbolKey,
+        value,
+      );
 
       // Populate the uniqueExpiries set
       const expiryDate = new Date(rawDerivative.expiry);
@@ -237,7 +279,7 @@ export class DataService {
     });
 
     DataService.processExpiries(uniqueExpiries);
-  }
+  };
 
   private static processExpiries = (uniqueExpiries: Set<string>) => {
     uniqueExpiries.forEach((expiryString) => {
@@ -247,7 +289,7 @@ export class DataService {
         date: expiryDate.getDate(),
         month: DataService.getMonthAbbreviation(expiryDate.getMonth()),
         year: expiryDate.getFullYear(),
-      })
+      });
     });
 
     // Sort the expiries array in ascending order
@@ -264,7 +306,7 @@ export class DataService {
       );
       return dateA.getTime() - dateB.getTime();
     });
-  }
+  };
 
   private static linkDerivatives = () => {
     for (const [key, value] of DataService.derivativesTokenReferenceMap) {
@@ -287,11 +329,13 @@ export class DataService {
         ).puts;
 
         puts.push(key);
-      } else {
+      }
+      // todo: remove this check later, its only to catch bugs right now.
+      else {
         throw new Error(`unexpected instrument type: ${value.instrumentType}`);
       }
     }
-  }
+  };
 
   private static calculateStepSizeFromCallsAndUpdateDerivatives = () => {
     for (const [key, value] of DataService.equitiesTradingSymbolReferenceMap) {
@@ -305,7 +349,10 @@ export class DataService {
 
         stepSize = secondCall.strike - firstCall.strike;
 
-        DataService.equitiesTradingSymbolReferenceStepSizeMap.set(key, stepSize);
+        DataService.equitiesTradingSymbolReferenceStepSizeMap.set(
+          key,
+          stepSize,
+        );
       } else {
         throw new Error(`Cannot calculate step size, not enough information.`);
       }
@@ -317,9 +364,11 @@ export class DataService {
       );
 
       value.stepSize =
-        DataService.equitiesTradingSymbolReferenceStepSizeMap.get(equityTradingSymbol);
+        DataService.equitiesTradingSymbolReferenceStepSizeMap.get(
+          equityTradingSymbol,
+        );
     }
-  }
+  };
 
   private static processEquities = (rawEquities: Instrument[]) => {
     rawEquities.forEach((rawEquity) => {
@@ -336,26 +385,41 @@ export class DataService {
         return;
       }
 
-      const tokenKey = rawEquity.token
+      const tokenKey = rawEquity.token;
 
-      const tradingSymbolKey = rawEquity.tradingsymbol
+      const tradingSymbolKey = rawEquity.tradingsymbol;
 
       const value = DataMapper.Equity.toDomain(rawEquity);
 
       DataService.equitiesTokenReferenceMap.set(tokenKey, value);
 
-      DataService.equitiesTradingSymbolReferenceMap.set(tradingSymbolKey, value);
+      DataService.equitiesTradingSymbolReferenceMap.set(
+        tradingSymbolKey,
+        value,
+      );
     });
-
-  }
+  };
 
   private static setFilenamesForToday = () => {
     const today = new Date();
     const dateString = `${today.toLocaleString('default', { month: 'short' }).toLowerCase()}${today.getDate()}`;
 
-    DataService.RAW_DERIVATIVES_FILENAME = path.join(__dirname, '..', `${dateString}_raw_derivatives.json`);
-    DataService.RAW_EQUITIES_FILENAME = path.join(__dirname, '..', `${dateString}_raw_equities.json`);
-  }
+    DataService.RAW_DERIVATIVES_FILENAME = path.join(
+      __dirname,
+      '..',
+      `${dateString}_raw_derivatives.json`,
+    );
+    DataService.RAW_EQUITIES_FILENAME = path.join(
+      __dirname,
+      '..',
+      `${dateString}_raw_equities.json`,
+    );
+    console.debug(
+      `derivatives are stored in:`,
+      DataService.RAW_DERIVATIVES_FILENAME,
+    );
+    console.debug(`equities are stored in:`, DataService.RAW_EQUITIES_FILENAME);
+  };
 
   static DERRIVATIVE_TRADING_SYMBOL_REGEX =
     /^([A-Z][A-Z]+)(\d{1,2})([A-Z]{3})(\d+(\.\d+)?)(PE|CE)$/;
@@ -399,27 +463,30 @@ export class DataService {
       instrumentType:
         instrumentType as DerivativeTradingsymbolParsed['instrumentType'],
     };
-  }
+  };
 
   static parseExpiry = (expiry: string): DerivativeExpiryParsed => {
     const date = new Date(expiry);
     const month = date
       .toLocaleString('default', { month: 'short' })
       .toUpperCase() as ExpiryMonth;
-    const _date = date.getDate()
-    const year = date.getFullYear()
+    const _date = date.getDate();
+    const year = date.getFullYear();
     return { date: _date, month, year };
-  }
+  };
 
-  static writeJsonToFile = async (filePath: string, data: any): Promise<void> => {
+  static writeJsonToFile = async (
+    filePath: string,
+    data: any,
+  ): Promise<void> => {
     const jsonData = JSON.stringify(data, null, 2);
     await fs.writeFile(filePath, jsonData, 'utf8');
-  }
+  };
 
   static readJsonFromFile = async (filePath: string): Promise<any> => {
     const data = await fs.readFile(filePath, 'utf8');
     return JSON.parse(data);
-  }
+  };
 
   static fileExists = async (filePath: string): Promise<boolean> => {
     try {
@@ -428,7 +495,7 @@ export class DataService {
     } catch {
       return false;
     }
-  }
+  };
 
   static isCallOption = (tradingSymbol: DerivativeTradingsymbol) => {
     try {
@@ -442,7 +509,7 @@ export class DataService {
     }
 
     return false;
-  }
+  };
 
   static isDerivative = (
     tradingSymbol: EquityTradingsymbol | DerivativeTradingsymbol,
@@ -462,7 +529,7 @@ export class DataService {
     }
 
     return false;
-  }
+  };
 
   public static isExpiringInMonth = (
     tradingSymbol: DerivativeTradingsymbol,
@@ -475,9 +542,12 @@ export class DataService {
       derivativeInfo.expiryParsed.month.toLocaleLowerCase() ===
       month.toLocaleLowerCase()
     );
-  }
+  };
 
-  public static hasNPlusDaysToExpiry = (tradingSymbol: DerivativeTradingsymbol, n: number) => {
+  public static hasNPlusDaysToExpiry = (
+    tradingSymbol: DerivativeTradingsymbol,
+    n: number,
+  ) => {
     const today = DataService.getToday();
 
     const derivativeData =
@@ -506,9 +576,9 @@ export class DataService {
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
     return daysDiff >= n;
-  }
+  };
 
-  public static  isPutOption = (tradingSymbol: DerivativeTradingsymbol) => {
+  public static isPutOption = (tradingSymbol: DerivativeTradingsymbol) => {
     try {
       const parsedTradingsymbol =
         DataService.parseDerivativeTradingSymbol(tradingSymbol);
@@ -520,9 +590,9 @@ export class DataService {
     }
 
     return false;
-  }
+  };
 
-  public static  getToday = (): {
+  public static getToday = (): {
     date: ExpiryDate;
     month: ExpiryMonth;
     year: ExpiryYear;
@@ -534,9 +604,9 @@ export class DataService {
       month: DataService.getMonthAbbreviation(now.getMonth()),
       year: now.getFullYear(),
     };
-  }
+  };
 
-  public static  getMonthIndex = (month: ExpiryMonth): number => {
+  public static getMonthIndex = (month: ExpiryMonth): number => {
     // Function to map ExpiryMonth to month index (0 for JAN, 1 for FEB, etc.)
     const monthIndexMap: Record<ExpiryMonth, number> = {
       JAN: 0,
@@ -553,17 +623,17 @@ export class DataService {
       DEC: 11,
     };
     return monthIndexMap[month];
-  }
+  };
 
-  public static  getMonthAbbreviation = (monthIndex: number): ExpiryMonth => {
+  public static getMonthAbbreviation = (monthIndex: number): ExpiryMonth => {
     const date = new Date(2000, monthIndex, 1);
     const options = { month: 'short' } as const;
     return date.toLocaleString('en-US', options).toUpperCase() as ExpiryMonth;
-  }
+  };
 
   public static getNearestExpiry = () => {
     return DataService.expiries.at(0);
-  }
+  };
 
   public static getNearestExpiryForMonth = (
     month: ExpiryMonth,
@@ -573,7 +643,7 @@ export class DataService {
         return expiry;
       }
     }
-  }
+  };
 
   public static getAvailableOTMCallOptionFor = (
     tradingsymbol: EquityTradingsymbol,
@@ -590,7 +660,7 @@ export class DataService {
         return position;
       }
     }
-  }
+  };
 
   public static getAvailableCallOptionsFor = (
     tradingsymbol: EquityTradingsymbol,
@@ -626,5 +696,5 @@ export class DataService {
     });
 
     return callOptions;
-  }
+  };
 }

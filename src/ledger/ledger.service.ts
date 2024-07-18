@@ -14,9 +14,9 @@ export class LedgersService {
   constructor(
     @Inject(LEDGER_STORE_PORT)
     private readonly storage: LedgerStorePort,
-    private readonly logger: AppLogger
+    private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
 
   async initialize() {
@@ -24,7 +24,7 @@ export class LedgersService {
   }
 
   public async syncLedger() {
-    this.trades = await this.storage.getTrades()
+    this.trades = await this.storage.getTrades();
   }
 
   public getTrades() {
@@ -32,21 +32,20 @@ export class LedgersService {
   }
 
   public getTradesByTag(tag: string) {
-    return this.trades.filter(trade => trade.tag.startsWith(tag))
+    return this.trades.filter((trade) => trade.tag.startsWith(tag));
   }
 
   // mutation, after this make sure to load ledger again
   public async saveTrade(trade: Trade) {
-    await this.storage.saveTrade(trade)
+    await this.storage.saveTrade(trade);
   }
 
   static create = (createTradeDto: Omit<Trade, 'id'>) => {
     return {
       ...createTradeDto,
-      id: randomUUID()
-    }
-  }
-
+      id: randomUUID(),
+    };
+  };
 
   /*
     brokerOrderId: string;
@@ -67,11 +66,11 @@ export class LedgersService {
   */
   @OnEvent(LiveService.Events.OrderUpdateOrderComplete)
   private onOrderCompleteEvent(update: OrderUpdate) {
-    this.logger.log(`order complete`, update)
+    this.logger.log(`order complete`, update);
   }
 
   @OnEvent(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete)
   private onOrderModifiedOrPartialCompleteEvent(update: OrderUpdate) {
-    this.logger.log(`order partial update`, update)
+    this.logger.log(`order partial update`, update);
   }
 }

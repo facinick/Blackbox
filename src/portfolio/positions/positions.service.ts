@@ -13,44 +13,52 @@ export class PositionsService {
     private readonly apiService: ApiService,
     private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
 
   initialize = async () => {
-    this.logger.log(`inintializing positions service`)
+    this.logger.log(`inintializing positions service`);
     await this.syncPositions();
-  }
+  };
 
   public syncPositions = async () => {
-    this.positions = await this.apiService.getNetPositions()
-    this.logger.log(`positions updated:`,this.positions)
-    this.logger.log(`open derivative positions:`,this.getOpenDerivativePositions())
-  }
+    this.positions = await this.apiService.getNetPositions();
+    this.logger.log(`positions updated:`, this.positions);
+    this.logger.log(
+      `open derivative positions:`,
+      this.getOpenDerivativePositions(),
+    );
+  };
 
   getPositions = () => {
     return this.positions;
-  }
+  };
 
   getOpenDerivativePositions = (): DerivativePosition[] => {
-    const positions =  this.positions.filter(openDerivativePositionsFilter)
-    const derivativePositions = positions.map(this.positionToDerivativePosition)
-    return derivativePositions
-  }
+    const positions = this.positions.filter(openDerivativePositionsFilter);
+    const derivativePositions = positions.map(
+      this.positionToDerivativePosition,
+    );
+    return derivativePositions;
+  };
 
   private positionToDerivativePosition = (
-    position:Position,
+    position: Position,
   ): DerivativePosition => {
-    const derivativeInfo = DataService.getDerivativeInfoFromToken(position.token)
-    const name: DerivativeName = derivativeInfo.tradingsymbolParsed.name
-    const tradingsymbol: DerivativeTradingsymbol = derivativeInfo.tradingsymbol
-    const instrumentType: DerivativeInstrumentType = derivativeInfo.tradingsymbolParsed.instrumentType;
+    const derivativeInfo = DataService.getDerivativeInfoFromToken(
+      position.token,
+    );
+    const name: DerivativeName = derivativeInfo.tradingsymbolParsed.name;
+    const tradingsymbol: DerivativeTradingsymbol = derivativeInfo.tradingsymbol;
+    const instrumentType: DerivativeInstrumentType =
+      derivativeInfo.tradingsymbolParsed.instrumentType;
     const token: DerivativeToken = position.token;
-    const expiry: DerivativeExpiryParsed = derivativeInfo.expiryParsed 
-    const strike: StrikePrice = derivativeInfo.strike 
+    const expiry: DerivativeExpiryParsed = derivativeInfo.expiryParsed;
+    const strike: StrikePrice = derivativeInfo.strike;
     const quantity: number = position.quantity;
     const averagePrice: number = position.averagePrice;
-    if(position.quantity === 0) {
-      throw new Error(`open derivative position has quantity 0`)
+    if (position.quantity === 0) {
+      throw new Error(`open derivative position has quantity 0`);
     }
     const buyOrSell: BuyOrSell = position.quantity > 0 ? 'BUY' : 'SELL';
 
@@ -63,7 +71,7 @@ export class PositionsService {
       averagePrice,
       buyOrSell,
       instrumentType,
-      strike
+      strike,
     };
-  }
+  };
 }

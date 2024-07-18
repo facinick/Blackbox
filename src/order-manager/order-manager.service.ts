@@ -46,9 +46,9 @@ class OrderManagerService {
     private readonly orderHandlerFactory: (
       orderRequest: OrderRequest,
     ) => OrderHandler,
-    private readonly logger: AppLogger
+    private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
   private readonly orderBasket: Set<OrderRequest> = new Set();
   private readonly orderHandlers: Map<string, OrderHandler> = new Map();
@@ -64,7 +64,7 @@ class OrderManagerService {
     this.initializeOrderBasket(orderDtos); // Initialize order basket with provided orders
 
     // ensure all orders reach completion
-    this.logger.log(`executing orders:`, this.orderBasket)
+    this.logger.log(`executing orders:`, this.orderBasket);
     await Promise.allSettled(
       Array.from(this.orderBasket).map((orderRequest) => {
         return new Promise((resolve, reject) => {
@@ -75,7 +75,7 @@ class OrderManagerService {
             this.eventEmitter.on('order-handler.done', resolve);
             handler.execute();
           } catch (error) {
-            this.logger.error("failed to create order handler", error)
+            this.logger.error('failed to create order handler', error);
             reject(error);
           }
         });

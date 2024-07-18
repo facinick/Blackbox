@@ -46,15 +46,39 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function throttle(func: (...args: any[]) => void, limit: number): (...args: any[]) => void {
+function throttle(
+  func: (...args: any[]) => void,
+  limit: number,
+): (...args: any[]) => void {
   let inThrottle: boolean;
-  return function(...args: any[]) {
+  return function (...args: any[]) {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
-  }
+  };
+}
+
+function Throttle(milliseconds: number) {
+  return function (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
+    const originalMethod = descriptor.value;
+    let lastExecutionTime = 0;
+
+    descriptor.value = function (...args: any[]) {
+      const now = Date.now();
+      if (now - lastExecutionTime >= milliseconds) {
+        lastExecutionTime = now;
+        return originalMethod.apply(this, args);
+      }
+    };
+
+    return descriptor;
+  };
 }
 
 async function sleep(durationMs: number) {
@@ -68,5 +92,6 @@ export {
   aNotInB,
   withRetry,
   clamp,
-  throttle
+  throttle,
+  Throttle,
 };

@@ -1,9 +1,7 @@
-import { Balance } from "./Balances"
+import { Balance } from './Balances';
 
 interface BalancesApiPort {
-    getBalance: () => Promise<Balance>
+  getBalance: () => Promise<Balance>;
 }
 
-export {
-    BalancesApiPort
-}
+export { BalancesApiPort };

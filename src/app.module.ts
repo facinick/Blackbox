@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ApiModule } from './api/api.module';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -12,6 +12,7 @@ import { StrategyModule } from './strategy/strategy.module';
 import { AppController } from './app.controller';
 import { OrderManagerModule } from './order-manager/order-manager.module';
 import { AppLoggerModule } from './logger/logger.module';
+import { OnLoadRedirectMiddleware } from './middlewares';
 
 @Module({
   imports: [
@@ -27,6 +28,10 @@ import { AppLoggerModule } from './logger/logger.module';
     StrategyModule,
   ],
   providers: [AppService],
-  controllers: [AppController]
+  controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(OnLoadRedirectMiddleware).forRoutes('*');
+  }
+}

@@ -10,8 +10,8 @@ import { LEDGER_STORE_PORT } from './ledger.store.port';
     LedgersService,
     {
       useClass: LedgerLocalStore,
-      provide: LEDGER_STORE_PORT
-    }
+      provide: LEDGER_STORE_PORT,
+    },
   ],
   exports: [LedgersService],
 })

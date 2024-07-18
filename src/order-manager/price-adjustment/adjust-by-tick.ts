@@ -7,7 +7,6 @@ import {
 
 @Injectable()
 class AdjustByTick implements PriceAdjustmentStrategy {
-
   async getNextPrice(
     orderRequest: OrderRequest,
     lastPrice: number,

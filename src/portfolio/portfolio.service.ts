@@ -12,19 +12,19 @@ export class PortfolioService {
     private readonly holdingsService: HoldingsService,
     private readonly positionsService: PositionsService,
     private readonly balanceService: BalancesService,
-    private readonly logger: AppLogger
+    private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
 
   initialize = async () => {
     await this.holdingsService.initialize();
-    this.logger.log(`holdings initialized`)
+    this.logger.log(`holdings initialized`);
     await this.positionsService.initialize();
-    this.logger.log(`positions initialized`)
+    this.logger.log(`positions initialized`);
     await this.balanceService.initialize();
-    this.logger.log(`balance initialized`)
-  }
+    this.logger.log(`balance initialized`);
+  };
 
   syncPortfolio = async ({
     syncHoldings = true,
@@ -50,7 +50,7 @@ export class PortfolioService {
     }
 
     await Promise.all(syncPromises);
-  }
+  };
 
   getPortfolio = () => {
     return {
@@ -58,81 +58,90 @@ export class PortfolioService {
       positions: this.getPositions(),
       balances: this.getBalances(),
     };
-  }
+  };
 
   getHoldings = () => {
     return this.holdingsService.getHoldings();
-  }
+  };
 
   // todo: can this have more than one element for same trading symbol?
-  getHoldingQuantityForEquity = (tradingsymbol: EquityTradingsymbol): Holding['quantity'] => {
-
+  getHoldingQuantityForEquity = (
+    tradingsymbol: EquityTradingsymbol,
+  ): Holding['quantity'] => {
     const holdings = this.holdingsService
-    .getHoldings()
-    .filter((holding) => holding.tradingsymbol === tradingsymbol)
+      .getHoldings()
+      .filter((holding) => holding.tradingsymbol === tradingsymbol);
 
-    if(holdings.length === 1) {
-      return holdings[0].quantity
+    if (holdings.length === 1) {
+      return holdings[0].quantity;
     } else if (holdings.length === 0) {
-      return 0
+      return 0;
     } else {
-      this.logger.error(`multiple holdings for ${tradingsymbol}`, holdings)
-      throw new Error(`multiple holdings for ${tradingsymbol}`)
+      this.logger.error(`multiple holdings for ${tradingsymbol}`, holdings);
+      throw new Error(`multiple holdings for ${tradingsymbol}`);
     }
-  }
+  };
 
   getPositions = () => {
     return this.positionsService.getPositions();
-  }
+  };
 
   getOpenDerivativePositions = () => {
     return this.positionsService.getOpenDerivativePositions();
-  }
+  };
 
   getOpenCESellPositionForEquity = (tradingsymbol: EquityTradingsymbol) => {
-    const allPositions = this.getOpenDerivativePositions()
-    const ceSellPositions = allPositions.filter(position => {
-      if (position.quantity < 0 &&
+    const allPositions = this.getOpenDerivativePositions();
+    const ceSellPositions = allPositions.filter((position) => {
+      if (
+        position.quantity < 0 &&
         position.instrumentType === 'CE' &&
         position.name === getDerivativeNameByEquityTradingsymbol(tradingsymbol)
-      )
-        position
-    })
+      ) {
+        return position;
+      }
+    });
 
-    if(ceSellPositions.length === 0) {
-      return ceSellPositions[0]
-    } else if(ceSellPositions.length === 0) {
-      return null
+    if (ceSellPositions.length === 1) {
+      return ceSellPositions[0];
+    } else if (ceSellPositions.length === 0) {
+      return null;
     } else {
-      this.logger.error(`multiple ce sell positions for ${tradingsymbol}`, ceSellPositions)
-      throw new Error(`multiple holdings for ${tradingsymbol}`)
+      this.logger.error(
+        `multiple ce sell positions for ${tradingsymbol}`,
+        ceSellPositions,
+      );
+      throw new Error(`multiple holdings for ${tradingsymbol}`);
     }
-
-  }
+  };
 
   getBalances = () => {
     return this.balanceService.getBalances();
-  }
+  };
 
-  getCallPositionsForEquityAndMonth = (equityTradingsymbol: EquityTradingsymbol, month: ExpiryMonth) => {
+  getCallPositionsForEquityAndMonth = (
+    equityTradingsymbol: EquityTradingsymbol,
+    month: ExpiryMonth,
+  ) => {
     const positions = [];
     const allPositions = this.getOpenDerivativePositions();
 
     for (const position of allPositions) {
-      const derivativeName = getDerivativeNameByEquityTradingsymbol(equityTradingsymbol);
+      const derivativeName =
+        getDerivativeNameByEquityTradingsymbol(equityTradingsymbol);
 
       // position is CE, Expiring in month, name is derivativeName
       if (
         position.name === derivativeName &&
         position.expiry.month === month &&
-        position.instrumentType === "CE"
+        position.instrumentType === 'CE'
       ) {
         positions.push(position);
       }
     }
     return positions;
-  }
+  };
 
-  // @OnEvent("order.*") 
+  // @OnEvent("order.*")
   // orderUpdateHandler
 }

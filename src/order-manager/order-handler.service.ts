@@ -18,12 +18,11 @@ order-handler.done (brokerOrderId, orderRequest)
 
 @Injectable()
 class OrderHandler {
-
   public static Events = {
-    OrderHandlerInitial: "order-handler.initial",
-    OrderHandlerUnknown: "order-handler.unknown",
-    OrderHandlerDone: "order-handler.done"
-  }
+    OrderHandlerInitial: 'order-handler.initial',
+    OrderHandlerUnknown: 'order-handler.unknown',
+    OrderHandlerDone: 'order-handler.done',
+  };
 
   // placed orders will have this not undefined
   private brokerOrderId: string;
@@ -48,10 +47,10 @@ class OrderHandler {
     private readonly eventEmitter: EventEmitter2,
     @Inject(PRICE_ADJUSTMENT_STRATEGY)
     private readonly priceAdjustment: PriceAdjustmentStrategy,
-    private readonly logger: AppLogger
+    private readonly logger: AppLogger,
   ) {
     this.lastPrice = orderRequest.price;
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
 
   public async execute() {

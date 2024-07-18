@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ApiService } from 'src/api/api.service';
-import {
-  DataService,
-} from 'src/data/data.service';
+import { DataService } from 'src/data/data.service';
 import { LiveService } from 'src/live/live.service';
 import { PortfolioService } from 'src/portfolio/portfolio.service';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -24,21 +22,20 @@ enum STAGE {
 }
 
 type ExecutionContext = {
-  equity: Equity
-  existingCallOption: DerivativePosition
-  existingStocksQuantity: number
-  cash: number
-  month: ExpiryMonth
-}
+  equity: Equity;
+  existingCallOption: DerivativePosition;
+  existingStocksQuantity: number;
+  cash: number;
+  month: ExpiryMonth;
+};
 
-// todo: strategy interface, multiple strategies managed by this service
 @Injectable()
 export class StrategyService {
   private readonly tokens: Set<EquityToken | DerivativeToken> = new Set();
   private sExecStg: STAGE = STAGE.SCAN;
 
-  private readonly context: Map<EquityToken, ExecutionContext> = new Map()
-  private currentToken: EquityToken | undefined
+  private readonly context: Map<EquityToken, ExecutionContext> = new Map();
+  private currentToken: EquityToken | undefined;
 
   constructor(
     private readonly liveService: LiveService,
@@ -48,34 +45,28 @@ export class StrategyService {
     private readonly orderManagerService: OrderManagerService,
     private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name)
+    this.logger.setContext(this.constructor.name);
   }
 
   initialize = async () => {
-    this.portfolioService
-      .getHoldings()
-      .forEach(({ token, tradingsymbol }) => {
-        if (DataService.hasEquityInfo(tradingsymbol)) {
-          this.tokens.add(token)
-          this.logger.log(`current token: ${token}`)
-          this.currentToken = token
-          this.updateStrategyContext()
-        }
-      });
+    this.portfolioService.getHoldings().forEach(({ token, tradingsymbol }) => {
+      if (DataService.hasEquityInfo(tradingsymbol)) {
+        this.tokens.add(token);
+        this.updateCurrentToken(token);
+        this.updateStrategyContext();
+      }
+    });
     this.liveService.subscribe(Array.from(this.tokens));
-  }
+  };
 
-
-  // for now, sequentially check for every token recieved in the tick
   @OnEvent(LiveService.Events.Ticks)
   @Throttle(30_000)
   private onPriceUpdate(ticks: Tick[]): void {
-
-    this.logger.debug(`processing price update`, ticks)
+    this.logger.debug(`Processing price update`, ticks);
 
     if (this.sExecStg === STAGE.LOCK) {
-      this.logger.debug(`strategy is locked, returning`)
-      return 
+      this.logger.debug(`Strategy is locked, returning`);
+      return;
     }
 
     for (const tick of ticks) {
@@ -83,220 +74,241 @@ export class StrategyService {
         continue;
       }
 
-      this.currentToken = tick.token
-      this.logger.log(`current token: ${tick.token}`)
-      if (this.strategyConditionTrue(tick.price) && this.sExecStg === STAGE.SCAN) {
-        this.logger.log(`strategy condition true for token: ${this.currentToken} at cmp: ${tick.price}`)
-        this.sExecStg = STAGE.LOCK
-        this.executeStrategy(tick)
+      this.updateCurrentToken(tick.token);
+      if (
+        this.isAnyStrategyConditionTrue(tick.price) &&
+        this.sExecStg === STAGE.SCAN
+      ) {
+        this.logger.log(
+          `Strategy condition true for token: ${this.currentToken} at CMP: ${tick.price}`,
+        );
+        this.sExecStg = STAGE.LOCK;
+        this.executeStrategy(tick);
         break;
       }
-
     }
   }
 
-
-  executeStrategy = async ({ price }: Tick) => {
-
+  private executeStrategy = async ({ price }: Tick) => {
     if (this.DECISION_CESellExists()) {
-      if(this.DECISION_CESelltargetHit(price)) {
-        await this.ACTION_ExitCESell(price)
-        await this.resync(false, true, true)
-        this.updateStrategyContext()
+      if (this.DECISION_CESelltargetHit(price)) {
+        await this.ACTION_ExitCESell(price);
+        await this.resync(false, true, true);
+        this.updateStrategyContext();
       }
-
     } else {
-
       if (this.DECISION_EnoughDaysToSellCE(price)) {
-        await this.ACTION_SellCE(price)
-        await this.resync(false, true, true)
-        this.updateStrategyContext()
+        await this.ACTION_SellCE(price);
+        await this.resync(false, true, true);
+        this.updateStrategyContext();
 
         if (this.DECISION_ShouldSellEquity(price)) {
-          await this.ACTION_SellEquity(price)
-          await this.resync(true, false, true)
-          this.updateStrategyContext()
+          await this.ACTION_SellEquity(price);
+          await this.resync(true, false, true);
+          this.updateStrategyContext();
         }
-
       } else if (this.DECISION_ShouldSellEquity(price)) {
-        await this.ACTION_SellEquity(price)
-        await this.resync(true, false, true)
-        this.updateStrategyContext()
+        await this.ACTION_SellEquity(price);
+        await this.resync(true, false, true);
+        this.updateStrategyContext();
       }
     }
-  }
+  };
 
-  strategyConditionTrue = (equityCmp: number) => {
-    this.logger.debug(`checking strategy condition for ${this.currentToken} at CMP: ${equityCmp}`)
+  private isAnyStrategyConditionTrue = (equityCmp: number) => {
+    this.logger.debug(
+      `Checking strategy condition for ${this.currentToken} at CMP: ${equityCmp}`,
+    );
     if (this.DECISION_CESellExists()) {
-
-      if(this.DECISION_CESelltargetHit(equityCmp)) {
-        this.logger.debug(`target hit for existing call sell`)
-        return true
+      if (this.DECISION_CESelltargetHit(equityCmp)) {
+        this.logger.debug(`Target hit for existing call sell`);
+        return true;
       }
-
     } else {
-
       if (this.DECISION_EnoughDaysToSellCE(equityCmp)) {
-
         if (this.DECISION_ShouldSellEquity(equityCmp)) {
-          this.logger.debug(`sell stocks as not enough days to expiry and cash < target`)
-          return true
+          this.logger.debug(
+            `Sell stocks as not enough days to expiry and cash < target`,
+          );
+          return true;
         }
-
       } else if (this.DECISION_ShouldSellEquity(equityCmp)) {
-        this.logger.debug(`sell stocks for cash`)
-        return true
+        this.logger.debug(`Sell stocks for cash`);
+        return true;
       }
     }
-  }
+  };
 
-  DECISION_CESellExists = () => {
-    this.logger.debug(`checking if call sell position exists`)
-    const context = this.context.get(this.currentToken)
+  // DECISION BLOCKS ---------------------------------- //
+  private DECISION_CESellExists = () => {
+    this.logger.debug(`[DECISION BLOCK] Checking if call sell position exists`);
+    const context = this.context.get(this.currentToken);
 
-    const ceSellPosition = context.existingCallOption
+    const ceSellPosition = context.existingCallOption;
 
     if (ceSellPosition) {
-      this.logger.debug(`position exists`, ceSellPosition)
-      return true
+      this.logger.log(`[DECISION BLOCK] Position exists`, ceSellPosition);
+      return true;
     }
 
-    this.logger.debug(`position doesn't exist`)
-    return false
-  }
+    this.logger.debug(`[DECISION BLOCK] Position doesn't exist`);
+    return false;
+  };
 
-  DECISION_CESelltargetHit = (equityCmp: number) => {
-    const context = this.context.get(this.currentToken)
+  private DECISION_CESelltargetHit = (equityCmp: number) => {
+    this.logger.debug(`[DECISION BLOCK] Checking if call sell target is hit`);
+    const context = this.context.get(this.currentToken);
 
-    const ceSellPosition = context.existingCallOption
+    const ceSellPosition = context.existingCallOption;
 
     if (!ceSellPosition) {
-      return false
+      return false;
     }
 
     if (equityCmp > ceSellPosition.averagePrice + ceSellPosition.strike) {
-      this.logger.log(`equityCmp > ceSellPosition.averagePrice + ceSellPosition.strike, ${equityCmp > ceSellPosition.averagePrice + ceSellPosition.strike}`)
-      return true
+      this.logger.log(
+        `[DECISION BLOCK] Hit | EquityCmp > ceSellPosition.averagePrice + ceSellPosition.strike, ${equityCmp > ceSellPosition.averagePrice + ceSellPosition.strike}`,
+      );
+      return true;
     }
 
-    return false
-  }
+    return false;
+  };
 
-  DECISION_EnoughDaysToSellCE = (equityCmp: number) => {
-    const context = this.context.get(this.currentToken)
+  private DECISION_EnoughDaysToSellCE = (equityCmp: number) => {
+    this.logger.debug(
+      `[DECISION BLOCK] Checking if enough days left till expiry`,
+    );
+    const context = this.context.get(this.currentToken);
 
     const availableOTMCallOption = DataService.getAvailableOTMCallOptionFor(
       context.equity.tradingsymbol,
       context.month,
-      equityCmp)
-
-    if (!availableOTMCallOption) {
-      this.logger.warn(`no OTM call options to sell for equity: ${this.currentToken} and for cmp: ${equityCmp}`)
-      return false
-    }
-
-    if (!DataService.hasNPlusDaysToExpiry(availableOTMCallOption.tradingsymbol, 3)) {
-      this.logger.warn(`not enough days left to expiry of available OTM call option, cant sell`)
-      return false
-    }
-
-    return true
-  }
-
-  DECISION_ShouldSellEquity = (equityCmp: number) => {
-    const context = this.context.get(this.currentToken)
-
-    const target = this.calculateTarget(context.existingStocksQuantity, equityCmp)
-
-    if (context.cash < target && context.existingStocksQuantity > 0) {
-      return true
-    }
-
-    return false
-  }
-
-
-
-  ACTION_SellCE = async (equityCmp: number) => {
-    const context = this.context.get(this.currentToken)
-
-    const availableOTMCallOption = DataService.getAvailableOTMCallOptionFor(
-      context.equity.tradingsymbol,
-      context.month,
-      equityCmp)
-
-    if (!availableOTMCallOption) {
-      this.logger.warn(`no OTM call options to sell for equity: ${this.currentToken} and for cmp: ${equityCmp}`)
-      return true
-    }
-
-    const ltpRecord = await this.apiService.getDerivativeLtp(
-      [availableOTMCallOption.tradingsymbol]
+      equityCmp,
     );
 
-    const currentMonth = DataService.getToday().month
+    if (!availableOTMCallOption) {
+      this.logger.warn(
+        `No OTM call options to sell for equity: ${this.currentToken} and for CMP: ${equityCmp}`,
+      );
+      return false;
+    }
+
+    if (
+      !DataService.hasNPlusDaysToExpiry(availableOTMCallOption.tradingsymbol, 3)
+    ) {
+      this.logger.warn(
+        `[DECISION BLOCK] Not enough days left to expiry of available OTM call option, can't sell`,
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  private DECISION_ShouldSellEquity = (equityCmp: number) => {
+    const context = this.context.get(this.currentToken);
+
+    const target = this.calculateTarget(
+      context.existingStocksQuantity,
+      equityCmp,
+    );
+
+    if (context.cash < target && context.existingStocksQuantity > 0) {
+      return true;
+    }
+
+    return false;
+  };
+  // ---------------------------------- DECISION BLOCKS //
+
+  // ACTION BLOCKS ---------------------------------- //
+  private ACTION_SellCE = async (equityCmp: number) => {
+    const context = this.context.get(this.currentToken);
+
+    const availableOTMCallOption = DataService.getAvailableOTMCallOptionFor(
+      context.equity.tradingsymbol,
+      context.month,
+      equityCmp,
+    );
+
+    if (!availableOTMCallOption) {
+      this.logger.warn(
+        `No OTM call options to sell for equity: ${this.currentToken} and for CMP: ${equityCmp}`,
+      );
+      return true;
+    }
+
+    const ltpRecord = await this.apiService.getDerivativeLtp([
+      availableOTMCallOption.tradingsymbol,
+    ]);
+
+    const currentMonth = DataService.getToday().month;
 
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: context.existingCallOption.tradingsymbol,
       price: ltpRecord[availableOTMCallOption.tradingsymbol].price,
       quantity: availableOTMCallOption.lotSize,
       buyOrSell: 'SELL',
-      tag: `${context.equity.tradingsymbol}_${currentMonth}_CESELL`
+      tag: `${context.equity.tradingsymbol}_${currentMonth}_CESELL`,
     };
 
-    this.logger.log(`order to execute:`, newOrder)
+    this.logger.log(`Order to execute:`, newOrder);
 
     await this.orderManagerService.execute([newOrder]);
-  }
+  };
 
-  ACTION_ExitCESell = async (equityCmp: number) => {
-    this.logger.debug(`ACTION exit ce sell`)
-    const context = this.context.get(this.currentToken)
+  private ACTION_ExitCESell = async (equityCmp: number) => {
+    this.logger.debug(`Action exit CE sell`);
+    const context = this.context.get(this.currentToken);
 
-    if(!context.existingCallOption) {
-      this.logger.warn(`no existing call option found, why trying to exit it?`)
-      return
+    if (!context.existingCallOption) {
+      this.logger.warn(`No existing call option found, why trying to exit it?`);
+      return;
     }
 
-    const ltpRecord = await this.apiService.getDerivativeLtp(
-      [context.existingCallOption.tradingsymbol]
-    );
+    const ltpRecord = await this.apiService.getDerivativeLtp([
+      context.existingCallOption.tradingsymbol,
+    ]);
 
-    this.logger.debug(`CE latest price:`, ltpRecord)
+    this.logger.debug(`CE latest price:`, ltpRecord);
 
-    const currentMonth = DataService.getToday().month
+    const currentMonth = DataService.getToday().month;
 
-    this.logger.debug(`builing new order to exit call`)
+    this.logger.debug(`Building new order to exit call`);
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: context.existingCallOption.tradingsymbol,
-      price:
-        ltpRecord[context.existingCallOption.tradingsymbol]
-          .price,
+      price: ltpRecord[context.existingCallOption.tradingsymbol].price,
       quantity: context.existingCallOption.quantity,
       buyOrSell: 'BUY',
-      tag: `${context.equity.tradingsymbol}_${currentMonth}_SQOFF`
+      tag: `${context.equity.tradingsymbol}_${currentMonth}_SQOFF`,
     };
 
-    this.logger.log(`sending order to order manager:`, newOrder)
+    this.logger.log(`Sending order to order manager:`, newOrder);
 
     await this.orderManagerService.execute([newOrder]);
-  }
+  };
 
-  ACTION_SellEquity = async (equityCmp: number) => {
-    const context = this.context.get(this.currentToken)
+  private ACTION_SellEquity = async (equityCmp: number) => {
+    const context = this.context.get(this.currentToken);
 
-    const currentMonth = DataService.getToday().month
+    const currentMonth = DataService.getToday().month;
 
-    const target = this.calculateTarget(context.existingStocksQuantity, equityCmp)
+    const target = this.calculateTarget(
+      context.existingStocksQuantity,
+      equityCmp,
+    );
 
     const targetQuantity = clamp(
-      Math.ceil((target - context.cash) / equityCmp), 
-      0, 
-      context.existingStocksQuantity);
+      Math.ceil((target - context.cash) / equityCmp),
+      0,
+      context.existingStocksQuantity,
+    );
 
     if (targetQuantity === 0) {
-      this.logger.warn(`dont have enough stocks to sell for ${this.currentToken}, existing quantity: ${context.existingStocksQuantity}, need to sell: ${targetQuantity}`)
+      this.logger.warn(
+        `Don't have enough stocks to sell for ${this.currentToken}, existing quantity: ${context.existingStocksQuantity}, need to sell: ${targetQuantity}`,
+      );
       return;
     }
 
@@ -305,15 +317,12 @@ export class StrategyService {
       price: equityCmp,
       quantity: targetQuantity,
       buyOrSell: 'SELL',
-      tag: `${context.equity.tradingsymbol}_${currentMonth}_EQSELL`
+      tag: `${context.equity.tradingsymbol}_${currentMonth}_EQSELL`,
     };
 
     await this.orderManagerService.execute([newOrder]);
-  }
-
-
-
-
+  };
+  // ---------------------------------- ACTION BLOCKS //
 
   private resync = async (holdings, positions, balance) => {
     await this.portfolioService.syncPortfolio({
@@ -321,34 +330,42 @@ export class StrategyService {
       syncPositions: positions,
       syncHoldings: holdings,
     });
-  }
+  };
+
+  private updateCurrentToken = (token: Token) => {
+    this.logger.log(`Current token: ${token}`);
+    this.currentToken = token;
+  };
 
   private updateStrategyContext = async () => {
-
     const equityInfo = DataService.getEquityInfoFromToken(this.currentToken);
 
-    const {tradingsymbol} = equityInfo
+    const { tradingsymbol } = equityInfo;
 
     const month = DataService.getToday().month;
-    const baseTag = `${tradingsymbol}_${month}`
+    const baseTag = `${tradingsymbol}_${month}`;
 
-    const existingCallOption = this.portfolioService.getOpenCESellPositionForEquity(tradingsymbol)
+    const existingCallOption =
+      this.portfolioService.getOpenCESellPositionForEquity(tradingsymbol);
 
-    const quantity = this.portfolioService.getHoldingQuantityForEquity(tradingsymbol)
-    const cash = this.calculateNetCash(baseTag)
+    const quantity =
+      this.portfolioService.getHoldingQuantityForEquity(tradingsymbol);
+    const cash = this.calculateNetCash(baseTag);
 
     const context = {
       equity: equityInfo,
       existingCallOption,
       existingStocksQuantity: quantity,
       cash,
-      month
-    }
+      month,
+    };
 
-    this.context.set(this.currentToken, context)
-    this.logger.log(`strategy context updated. token: ${this.currentToken}, context:`, context)
-
-  }
+    this.context.set(this.currentToken, context);
+    this.logger.log(
+      `Strategy context updated. Token: ${this.currentToken}, Context:`,
+      context,
+    );
+  };
 
   private calculateNetCash = (baseTag: string) => {
     const trades = this.ledgerService.getTradesByTag(baseTag);
@@ -366,16 +383,13 @@ export class StrategyService {
     }
 
     return pnl;
-  }
+  };
 
-  private calculateTarget = (quantity: Holding['quantity'], lastPrice: Tick['price']) => {
-    const target = quantity * lastPrice
-    return target
-  }
-
+  private calculateTarget = (
+    quantity: Holding['quantity'],
+    lastPrice: Tick['price'],
+  ) => {
+    const target = quantity * lastPrice;
+    return target;
+  };
 }
-
-
-// tag: ITC_JUL_CESELL <-> map position
-// tag: ITC_JUL_SQOFF <-> map position
-// tag: ITC_JUL_EQSELL <-> map position

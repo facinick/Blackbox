@@ -1,25 +1,25 @@
 type Position = {
-  tradingsymbol: Tradingsymbol
-  token: DerivativeToken
-  quantity: number
-  averagePrice: number
-  exchange: Exchange
-  product: Product
-}
+  tradingsymbol: Tradingsymbol;
+  token: DerivativeToken;
+  quantity: number;
+  averagePrice: number;
+  exchange: Exchange;
+  product: Product;
+};
 
 type DerivativePosition = {
-  name: DerivativeName
-  tradingsymbol: DerivativeTradingsymbol
-  token: DerivativeToken
-  quantity: number
-  averagePrice: number
-  buyOrSell: BuyOrSell
-  expiry: DerivativeExpiryParsed
-  instrumentType: DerivativeInstrumentType
-  strike: StrikePrice
-}
+  name: DerivativeName;
+  tradingsymbol: DerivativeTradingsymbol;
+  token: DerivativeToken;
+  quantity: number;
+  averagePrice: number;
+  buyOrSell: BuyOrSell;
+  expiry: DerivativeExpiryParsed;
+  instrumentType: DerivativeInstrumentType;
+  strike: StrikePrice;
+};
 
-export { type Position, type DerivativePosition }
+export { type Position, type DerivativePosition };
 
 // filter by:
 // exchange = NFO | BFO

@@ -28,7 +28,7 @@ const orderHandlerFactory = {
         apiService,
         eventEmitter,
         priceAdjustmentStrategy,
-        logger
+        logger,
       );
     };
   },

@@ -1,7 +1,7 @@
 type StrikePrice = number;
-type InstrumentType = 'CE' | 'PE' | 'EQ' | 'FUT'
+type InstrumentType = 'CE' | 'PE' | 'EQ' | 'FUT';
 type Segment = 'NFO-OPT' | 'NSE' | 'BFO-OPT' | 'BSE';
-type Exchange = 'NFO' | 'NSE' | 'BFO' | 'BSE' | 'CDS' | 'BCD' | 'MCX'
+type Exchange = 'NFO' | 'NSE' | 'BFO' | 'BSE' | 'CDS' | 'BCD' | 'MCX';
 type Product = 'NRML' | 'CNC';
 type ExpiryMonth =
   | 'JAN'
@@ -27,7 +27,7 @@ type EquityTradingsymbol = string;
 type EquityToken = number;
 type EquityTickSize = number;
 type EquitySegment = Extract<Segment, 'NSE' | 'BSE'>;
-type EquityExchange = Extract<Exchange, 'NSE'| 'BSE'>;
+type EquityExchange = Extract<Exchange, 'NSE' | 'BSE'>;
 
 // Derivatives
 type DerivativeName = string;

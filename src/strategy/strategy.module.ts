@@ -10,6 +10,13 @@ import { OrderManagerModule } from 'src/order-manager/order-manager.module';
 @Module({
   providers: [StrategyService],
   exports: [StrategyService],
-  imports: [PortfoliosModule, LiveModule, ApiModule, DataModule, LedgerModule, OrderManagerModule],
+  imports: [
+    PortfoliosModule,
+    LiveModule,
+    ApiModule,
+    DataModule,
+    LedgerModule,
+    OrderManagerModule,
+  ],
 })
 export class StrategyModule {}

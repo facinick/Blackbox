@@ -181,8 +181,11 @@ export class ApiService implements
   }
 
   getDerivativeLtp = async (tradingSymbols: Array<DerivativeTradingsymbol>) => {
+    this.logger.log(`getting ltp for derivative: ${tradingSymbols}`, tradingSymbols)
     const instruments = tradingSymbols.map(tradingSymbol => `${KiteConnect['EXCHANGE_NFO']}:${tradingSymbol}`)
+    this.logger.log(`instruments: ${instruments}`, instruments)
     const quotes = await this.kc.getLTP(instruments)
+    this.logger.log(`got quotes for ${instruments}`, quotes)
     return QuotesMapper.toDomain(quotes)
   }
 

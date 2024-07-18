@@ -5,6 +5,4 @@ type Holding = {
   averagePrice: number;
 };
 
-export {
-  type Holding
-}
+export { type Holding };
