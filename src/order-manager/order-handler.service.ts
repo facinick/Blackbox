@@ -50,37 +50,44 @@ class OrderHandler {
     private readonly logger: AppLogger,
   ) {
     this.lastPrice = orderRequest.price;
-    this.logger.setContext(this.constructor.name);
+    this.logger.setContext(`${this.constructor.name} ${(Math.random() * 100).toFixed(2)}`)
   }
 
-  public async execute() {
+  public execute = async () =>  {
+    console.log(`executing order`)
     this.eventEmitter.emit(`order-handler.${this.status}`);
-
     try {
       this.brokerOrderId = await withRetry(this.placeOrder.bind(this));
+      console.log(`done`, this.brokerOrderId)
       this.start();
     } catch (error) {
+      console.error(`failed`, error)
       this.status = 'done';
       this.stop();
     }
   }
 
-  private start() {
+  private start = () => {
+    this.logger.log(`starting order manage timer`)
     this.timer = setTimeout(this.manageOrder, this.RETRY_INTERVAL_MS);
   }
 
-  private stop() {
+  private stop = () => {
+    this.logger.log(`stopping order manage timer`)
     clearTimeout(this.timer);
     this.eventEmitter.emit(`order-handler.${this.status}`);
   }
 
-  private async manageOrder() {
+  private manageOrder = async () => {
+    this.logger.log(`managing order`)
     clearTimeout(this.timer);
 
     // MODIFY ORDER PRICE
     if (this.priceAdjustments < this.MAX_PRICE_ADJUSTMENT_ATTEMPTS) {
       try {
+        console.log(`modifying open order`)
         this.lastPrice = await withRetry(this.modifyOrder.bind(this));
+        console.log(`done modifying order`)
         this.priceAdjustments++;
         this.lastPriceAdjustmentTimestamp = Date.now();
         this.timer = setTimeout(this.manageOrder, this.RETRY_INTERVAL_MS);
@@ -93,7 +100,9 @@ class OrderHandler {
     // CANCEL ORDER
     else {
       try {
+        console.log(`cancelling open order`)
         await withRetry(this.cancelOrder.bind(this));
+        console.log(`done cancelling order`)
         this.status = 'done';
         this.stop();
       } catch (error) {
@@ -103,15 +112,15 @@ class OrderHandler {
     }
   }
 
-  private async placeOrder() {
+  private placeOrder = async () => {
     return this.apiService.placeOrder(this.orderRequest);
   }
 
-  private async cancelOrder() {
+  private cancelOrder = async () => {
     return this.apiService.cancelOrder({ orderId: this.brokerOrderId });
   }
 
-  private async getNextPriceClamped() {
+  private getNextPriceClamped = async () => {
     const nextPrice = await this.priceAdjustment.getNextPrice(
       this.orderRequest,
       this.lastPrice,
@@ -131,7 +140,7 @@ class OrderHandler {
     return clamp(nextPrice, min, max);
   }
 
-  private async modifyOrder() {
+  private modifyOrder = async () => {
     const cappedNextPrice = await this.getNextPriceClamped();
 
     await this.apiService.modifyOrderPrice({

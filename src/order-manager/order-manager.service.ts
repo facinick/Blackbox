@@ -38,20 +38,19 @@ order-manager.stopped
 
 @Injectable()
 class OrderManagerService {
+  
   private lock: boolean = false;
+  private readonly orderBasket: Set<OrderRequest> = new Set();
+  private readonly orderHandlers: Map<string, OrderHandler> = new Map();
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
-    @Inject('OrderHandlerFactory')
-    private readonly orderHandlerFactory: (
-      orderRequest: OrderRequest,
-    ) => OrderHandler,
     private readonly logger: AppLogger,
+    @Inject('OrderHandlerFactory')
+    private readonly orderHandlerFactory: (orderRequest: OrderRequest) => OrderHandler,
   ) {
     this.logger.setContext(this.constructor.name);
   }
-  private readonly orderBasket: Set<OrderRequest> = new Set();
-  private readonly orderHandlers: Map<string, OrderHandler> = new Map();
 
   async execute(orderDtos: Array<ExecuteOrderDto>) {
     if (this.lock) {
@@ -64,7 +63,7 @@ class OrderManagerService {
     this.initializeOrderBasket(orderDtos); // Initialize order basket with provided orders
 
     // ensure all orders reach completion
-    this.logger.log(`executing orders:`, this.orderBasket);
+    this.logger.log(`starting execution of ${this.orderBasket.size} orders`, this.orderBasket.values());
     await Promise.allSettled(
       Array.from(this.orderBasket).map((orderRequest) => {
         return new Promise((resolve, reject) => {
@@ -82,6 +81,7 @@ class OrderManagerService {
       }),
     );
 
+    this.logger.log(`finished execution of ${this.orderBasket.size} orders`);
     this.lock = false;
     this.eventEmitter.emit('order-manager.stopped');
   }
