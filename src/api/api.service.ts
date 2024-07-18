@@ -70,7 +70,7 @@ export class ApiService implements
   cancelOrder = async (cancelOrderDto: { orderId: string }) => {
     const { orderId } = cancelOrderDto;
 
-    return (await this.kc.cancelOrder(KiteConnect['VARIETY_REGULAR'], orderId))
+    return (await this.kc.cancelOrder('regular', orderId))
       .order_id;
   }
 
@@ -78,8 +78,9 @@ export class ApiService implements
     tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol;
     buyOrSell: BuyOrSell;
     quantity: number;
+    price: number
   }): Promise<string> => {
-    const { tradingsymbol, buyOrSell, quantity } = placeOrderDto;
+    const { tradingsymbol, buyOrSell, quantity, price } = placeOrderDto;
 
     let exchange, product;
 
@@ -87,23 +88,24 @@ export class ApiService implements
       DataService.isCallOption(tradingsymbol as DerivativeTradingsymbol) ||
       DataService.isPutOption(tradingsymbol as DerivativeTradingsymbol)
     ) {
-      exchange = KiteConnect['EXCHANGE_NFO'];
-      product = KiteConnect['PRODUCT_NRML'];
+      exchange = 'NFO';
+      product = 'NRML';
     } else {
-      exchange = KiteConnect['EXCHANGE_NSE'];
-      product = KiteConnect['PRODUCT_CNC'];
+      exchange = 'NSE';
+      product = 'CNC';
     }
 
-    return (
-      await this.kc.placeOrder(KiteConnect['VARIETY_REGULAR'], {
-        exchange,
-        tradingsymbol,
-        transaction_type: buyOrSell,
-        quantity,
-        product,
-        order_type: KiteConnect['ORDER_TYPE_LIMIT'],
-      })
-    ).order_id;
+    const placedOrder = await this.kc.placeOrder('regular', {
+      exchange,
+      tradingsymbol,
+      transaction_type: buyOrSell,
+      quantity,
+      product,
+      price,
+      order_type: 'LIMIT',
+    })
+
+    return placedOrder.order_id;
   }
 
   getOrders = async () => {
@@ -116,7 +118,7 @@ export class ApiService implements
     const { orderId, price } = modifyPriceDto;
 
     return (
-      await this.kc.modifyOrder(KiteConnect['VARIETY_REGULAR'], orderId, {
+      await this.kc.modifyOrder('regular', orderId, {
         price,
       })
     ).order_id;
@@ -137,22 +139,21 @@ export class ApiService implements
   }
 
   getTradableEquities = async () => {
-    const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NSE'])
+    const zInstruments = await this.kc.getInstruments('NSE')
     // this.logger.debug(`fetched tradable eq instruments from broker:`)
-    console.log(zInstruments)
     const instruments = zInstruments.map(InstrumentMapper.toDomain)
     return instruments
   }
 
   getTradableDerivatives = async () => {
-    const zInstruments = await this.kc.getInstruments(KiteConnect['EXCHANGE_NFO'])
+    const zInstruments = await this.kc.getInstruments('NFO')
     // this.logger.debug(`fetched tradable eq instruments from broker:`)
     const instruments = zInstruments.map(InstrumentMapper.toDomain)
     return instruments
   }
 
   getBalance = async () => {
-    const zBalance = await this.kc.getMargins(KiteConnect['MARGIN_EQUITY'])
+    const zBalance = await this.kc.getMargins()
     this.logger.debug(`fetched balance from broker:`,zBalance)
     const balance = BalancesMapper.toDomain(zBalance)
     return balance
@@ -175,17 +176,14 @@ export class ApiService implements
   }
 
   getStockLtp = async (tradingSymbols: Array<EquityTradingsymbol>) => {
-    const instruments = tradingSymbols.map(tradingSymbol => `${KiteConnect['EXCHANGE_NSE']}:${tradingSymbol}`)
+    const instruments = tradingSymbols.map(tradingSymbol => `NSE:${tradingSymbol}`)
     const quotes = await this.kc.getLTP(instruments)
     return QuotesMapper.toDomain(quotes)
   }
 
   getDerivativeLtp = async (tradingSymbols: Array<DerivativeTradingsymbol>) => {
-    this.logger.log(`getting ltp for derivative: ${tradingSymbols}`, tradingSymbols)
-    const instruments = tradingSymbols.map(tradingSymbol => `${KiteConnect['EXCHANGE_NFO']}:${tradingSymbol}`)
-    this.logger.log(`instruments: ${instruments}`, instruments)
+    const instruments = tradingSymbols.map(tradingSymbol => `NFO:${tradingSymbol}`)
     const quotes = await this.kc.getLTP(instruments)
-    this.logger.log(`got quotes for ${instruments}`, quotes)
     return QuotesMapper.toDomain(quotes)
   }
 
