@@ -279,7 +279,7 @@ export class StrategyService {
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: context.existingCallOption.tradingsymbol,
       price: ltpRecord[context.existingCallOption.tradingsymbol].price,
-      quantity: context.existingCallOption.quantity,
+      quantity: Math.abs(context.existingCallOption.quantity),
       buyOrSell: 'BUY',
       tag: `${context.equity.tradingsymbol}_${currentMonth}_SQOFF`,
     };
