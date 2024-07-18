@@ -3,10 +3,9 @@ import { Balance } from './Balances';
 
 export const BalancesMapper = {
   toDomain: (
-    zBalance: Awaited<ReturnType<KiteConnect['getMargins']>>,
+    margins: Awaited<ReturnType<KiteConnect['getMargins']>>,
   ): Balance => {
-    const equityHolding = zBalance.equity;
-    const { available } = equityHolding;
+    const { available } = margins.equity;
 
     const cash = available.cash;
 
