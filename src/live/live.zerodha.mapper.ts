@@ -1,3 +1,4 @@
+import { DataService } from 'src/data/data.service';
 import { Tick, OrderUpdate, OrderStatus } from './live';
 
 export type ZOrderUpdate = {
@@ -54,6 +55,21 @@ export const LiveMapper = {
 
   OrderUpdate: {
     toDomain: (zOrderUpdate: ZOrderUpdate): OrderUpdate => {
+
+      let segment: Segment
+      let instrumentType: InstrumentType
+
+      if(DataService.isCallOption(zOrderUpdate.tradingsymbol as DerivativeTradingsymbol)) {
+        segment = 'NFO-OPT',
+        instrumentType = 'CE'
+      } else if(DataService.isPutOption(zOrderUpdate.tradingsymbol as DerivativeTradingsymbol)) {
+        segment = 'NFO-OPT',
+        instrumentType = 'PE'   
+      } else {
+        segment = 'NSE',
+        instrumentType = 'EQ'   
+      }
+
       return {
         brokerOrderId: zOrderUpdate.order_id,
         status: zOrderUpdate.status as OrderStatus,
@@ -67,6 +83,8 @@ export const LiveMapper = {
         unfilledQuantity: zOrderUpdate.unfilled_quantity,
         price: zOrderUpdate.price,
         exchange: zOrderUpdate.exchange as Exchange,
+        segment,
+        instrumentType,
         // only in case of complete order
         averagePrice: zOrderUpdate.average_price,
         tag: zOrderUpdate.tag,
