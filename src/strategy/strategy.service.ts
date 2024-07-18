@@ -126,12 +126,10 @@ export class StrategyService {
       }
     } else {
       if (this.DECISION_EnoughDaysToSellCE(equityCmp)) {
-        if (this.DECISION_ShouldSellEquity(equityCmp)) {
-          this.logger.debug(
-            `Sell stocks as not enough days to expiry and cash < target`,
-          );
-          return true;
-        }
+        this.logger.debug(
+          `Enough days to sell CE`,
+        );
+        return true;
       } else if (this.DECISION_ShouldSellEquity(equityCmp)) {
         this.logger.debug(`Sell stocks for cash`);
         return true;
@@ -187,12 +185,16 @@ export class StrategyService {
       equityCmp,
     );
 
+    this.logger.log(`available OTM call option`, availableOTMCallOption)
+
     if (!availableOTMCallOption) {
       this.logger.warn(
         `No OTM call options to sell for equity: ${this.currentToken} and for CMP: ${equityCmp}`,
       );
       return false;
     }
+
+    this.logger.log(`checking if the call option has >=3 days to expiry`)
 
     if (
       !DataService.hasNPlusDaysToExpiry(availableOTMCallOption.tradingsymbol, 3)
@@ -203,10 +205,13 @@ export class StrategyService {
       return false;
     }
 
+    this.logger.log(`yes we can sell a call`, availableOTMCallOption.tradingsymbol)
+
     return true;
   };
 
   private DECISION_ShouldSellEquity = (equityCmp: number) => {
+    this.logger.debug(`[DECISION BLOCK] checking if should sell equity`);
     const context = this.context.get(this.currentToken);
 
     const target = this.calculateTarget(
@@ -214,7 +219,10 @@ export class StrategyService {
       equityCmp,
     );
 
+    this.logger.debug(`[DECISION BLOCK] target:`, target);
+
     if (context.cash < target && context.existingStocksQuantity > 0) {
+      this.logger.debug(`[DECISION BLOCK] cash:`, context.cash);
       return true;
     }
 
