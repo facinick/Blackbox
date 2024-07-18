@@ -246,7 +246,7 @@ export class StrategyService {
     const currentMonth = DataService.getToday().month;
 
     const newOrder: ExecuteOrderDto = {
-      tradingsymbol: context.existingCallOption.tradingsymbol,
+      tradingsymbol: availableOTMCallOption.tradingsymbol,
       price: ltpRecord[availableOTMCallOption.tradingsymbol].price,
       quantity: availableOTMCallOption.lotSize,
       buyOrSell: 'SELL',
