@@ -16,13 +16,13 @@ import { AppLogger } from 'src/logger/logger.service';
 
 const orderHandlerFactory = {
   provide: 'OrderHandlerFactory',
-  useFactory: (
+  useFactory: function (
     apiService: ApiService,
     eventEmitter: EventEmitter2,
     priceAdjustmentStrategy: PriceAdjustmentStrategy,
     logger: AppLogger,
-  ) => {
-    return (orderRequest: OrderRequest) => {
+  ){
+    return function (orderRequest: OrderRequest){
       return new OrderHandler(
         orderRequest,
         apiService,
@@ -32,7 +32,7 @@ const orderHandlerFactory = {
       );
     };
   },
-  inject: [ApiService, DataService, EventEmitter2, PRICE_ADJUSTMENT_STRATEGY],
+  inject: [ApiService, EventEmitter2, PRICE_ADJUSTMENT_STRATEGY, AppLogger],
 };
 
 @Module({
