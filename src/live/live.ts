@@ -18,6 +18,8 @@ export type OrderUpdate = {
   cancelledQuantity: number;
   price: number;
   exchange: Exchange;
+  segment: Segment;
+  instrumentType: InstrumentType;
   // only in case of complete order
   averagePrice: number;
   tag: string;

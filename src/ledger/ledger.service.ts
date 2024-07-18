@@ -65,9 +65,38 @@ export class LedgersService {
     tag: string;
   */
   @OnEvent(LiveService.Events.OrderUpdateOrderComplete)
-  private onOrderCompleteEvent(update: OrderUpdate) {
+  private async onOrderCompleteEvent(update: OrderUpdate) {
     this.logger.log(`order complete`, update);
+    await this.saveTrade({
+      id: update.brokerOrderId,
+      tradingsymbol: update.tradingsymbol,
+      token: update.token,
+      averagePrice: update.averagePrice,
+      quantity: update.quantity,
+      exchange: update.exchange,
+      instrumentType: update.instrumentType,
+      segment: update.segment,
+      buyOrSell: update.buyOrSell,
+      tag: update.tag
+    })
   }
+
+  // {
+  //   "brokerOrderId": "240718402574175",
+  //   "status": "COMPLETE",
+  //   "tradingsymbol": "ITC24JUL470CE",
+  //   "token": 30879234,
+  //   "buyOrSell": "SELL",
+  //   "quantity": 1600,
+  //   "pendingQuantity": 0,
+  //   "filledQuantity": 1600,
+  //   "cancelledQuantity": 0,
+  //   "unfilledQuantity": 0,
+  //   "price": 6.15,
+  //   "exchange": "NFO",
+  //   "averagePrice": 6.15,
+  //   "tag": null
+  // }
 
   @OnEvent(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete)
   private onOrderModifiedOrPartialCompleteEvent(update: OrderUpdate) {
