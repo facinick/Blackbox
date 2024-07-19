@@ -79,6 +79,7 @@ export class LedgersService {
       buyOrSell: update.buyOrSell,
       tag: update.tag,
     })
+    await this.syncLedger()
   }
 
   // {

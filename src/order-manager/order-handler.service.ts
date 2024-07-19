@@ -150,7 +150,7 @@ class OrderHandler {
   }
 
   @OnEvent(LiveService.Events.OrderUpdateOrderComplete)
-  onOrderCompletedEvent(update: OrderUpdate) {
+  onOrderCompleteEvent(update: OrderUpdate) {
     if (!(update.brokerOrderId === this.brokerOrderId)) {
       return
     }

@@ -77,7 +77,7 @@ export class MockApiService implements ApiService {
       quantity,
       price,
       transaction_type: buyOrSell,
-      exchange: 'NSE',
+      exchange: instrumentData.exchange,
       tag,
       status: 'OPEN',
       average_price: 0,
@@ -123,23 +123,87 @@ export class MockApiService implements ApiService {
     }
   }
 
+  // -1600 @ rs 10
+  // +1600 @ rs 09
+
+
   markOpenOrdersComplete = () => {
     this.zOrders.forEach((zOrder) => {
       if (zOrder.status === "OPEN") {
         zOrder.status = "COMPLETE"
         zOrder.filled_quantity = zOrder.quantity
         zOrder.average_price = zOrder.price
-      }
+        zOrder.pending_quantity = 0
 
-      this._onOrderUpdate({
-        ...zOrder,
-        user_id: '',
-        unfilled_quantity: 0,
-        app_id: 0,
-        checksum: '',
-      })
-  
-      this.logger.debug(`Completed order with id:${zOrder.order_id}`)
+        // update positions
+        if(zOrder.exchange === 'NFO') {
+
+          let existingPosition: boolean = false
+          this.positions.forEach((position) => {
+            if(position.token === zOrder.instrument_token) {
+              existingPosition = true
+              if(zOrder.transaction_type === 'BUY') {
+                const totalQuantity = position.quantity + zOrder.quantity;
+                const totalValue = (position.averagePrice * position.quantity) + (zOrder.price * zOrder.quantity);
+
+                position.quantity = totalQuantity;
+                position.averagePrice = totalQuantity === 0 ? 0 : totalValue / totalQuantity;
+
+                this.logger.log(`new avg price: ${position.averagePrice}`)
+
+              } else {
+                const totalQuantity = position.quantity - zOrder.quantity;
+                const totalValue = (position.averagePrice * position.quantity) - (zOrder.price * zOrder.quantity);
+                
+                position.quantity = totalQuantity;
+                position.averagePrice = totalQuantity === 0 ? 0 : totalValue / totalQuantity;
+
+                this.logger.log(`new avg price: ${position.averagePrice}`)
+              }
+            }
+          })
+
+          // if wasn't an existing position, that means it wasn't updated. so lets add this position
+          if(!existingPosition) {
+            this.positions.push({
+              tradingsymbol: zOrder.tradingsymbol,
+              token: zOrder.instrument_token,
+              quantity: zOrder.quantity,
+              averagePrice: zOrder.price,
+              exchange: 'NFO',
+              product: 'NRML'
+            })
+          }
+        } 
+        // update holdings
+        else {
+          this.holdings.forEach((holding) => {
+            if(holding.token === zOrder.instrument_token) {
+              if(zOrder.transaction_type === 'BUY') {
+                const totalQuantity = holding.quantity + zOrder.quantity;
+                const totalValue = (holding.averagePrice * holding.quantity) + (zOrder.average_price * zOrder.quantity);
+                holding.quantity = totalQuantity;
+                holding.averagePrice = totalValue / totalQuantity;
+              } else {
+                const totalQuantity = holding.quantity - zOrder.quantity;
+                const totalValue = (holding.averagePrice * holding.quantity) - (zOrder.average_price * zOrder.quantity);
+                holding.quantity = totalQuantity;
+                holding.averagePrice = totalValue / totalQuantity;
+              }
+            }
+          })
+        }
+
+        this._onOrderUpdate({
+          ...zOrder,
+          user_id: '',
+          unfilled_quantity: 0,
+          app_id: 0,
+          checksum: '',
+        })
+
+        this.logger.debug(`Completed order with id:${zOrder.order_id}`)
+      }
     });
   }
 
@@ -147,17 +211,17 @@ export class MockApiService implements ApiService {
     this.zOrders.forEach((zOrder) => {
       if (zOrder.status === "OPEN") {
         zOrder.status = "REJECTED"
-      }
 
-      this._onOrderUpdate({
-        ...zOrder,
-        user_id: '',
-        unfilled_quantity: 0,
-        app_id: 0,
-        checksum: '',
-      })
-  
-      this.logger.debug(`Rejected order with id:${zOrder.order_id}`)
+        this._onOrderUpdate({
+          ...zOrder,
+          user_id: '',
+          unfilled_quantity: 0,
+          app_id: 0,
+          checksum: '',
+        })
+    
+        this.logger.debug(`Rejected order with id:${zOrder.order_id}`)
+      }
     });
   }
 
@@ -285,7 +349,7 @@ export class MockApiService implements ApiService {
       if(ticks && ticks.length > 0) {
         this._onTick(ticks)
       }
-    }, 30_000)
+    }, 15_000)
 
     this._onConnect()
     return

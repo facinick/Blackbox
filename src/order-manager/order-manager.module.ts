@@ -11,6 +11,7 @@ import {
 import { DataModule } from 'src/data/data.module'
 import { PRICE_ADJUSTMENT_STRATEGY } from './price-adjustment/price-adjustment.strategy'
 import { AppLogger } from 'src/logger/logger.service'
+import { LiveService } from 'src/live/live.service'
 
 const orderHandlerFactory = {
   provide: 'OrderHandlerFactory',
@@ -21,13 +22,29 @@ const orderHandlerFactory = {
     logger: AppLogger,
   ) {
     return function (orderRequest: OrderRequest) {
-      return new OrderHandler(
+
+      const handler = new OrderHandler(
         orderRequest,
         apiService,
         eventEmitter,
         priceAdjustmentStrategy,
         logger,
-      )
+      );
+
+      // Subscribe to events here:
+      handler.onOrderCompleteEvent = handler.onOrderCompleteEvent.bind(handler)
+      handler.onOrderRejectedEvent = handler.onOrderRejectedEvent.bind(handler)
+      handler.onOrderCancelledEvent = handler.onOrderCancelledEvent.bind(handler)
+      handler.onOrderOpenEvent = handler.onOrderOpenEvent.bind(handler)
+      handler.onOrderUpdateEvent = handler.onOrderUpdateEvent.bind(handler)
+      
+      eventEmitter.on(LiveService.Events.OrderUpdateOrderComplete, handler.onOrderCompleteEvent);
+      eventEmitter.on(LiveService.Events.OrderUpdateOrderRejected, handler.onOrderRejectedEvent);
+      eventEmitter.on(LiveService.Events.OrderUpdateOrderCancelled, handler.onOrderCancelledEvent);
+      eventEmitter.on(LiveService.Events.OrderUpdateOrderOpen, handler.onOrderOpenEvent);
+      eventEmitter.on(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete, handler.onOrderUpdateEvent);
+
+      return handler;
     }
   },
   inject: [API_SERVICE, EventEmitter2, PRICE_ADJUSTMENT_STRATEGY, AppLogger],

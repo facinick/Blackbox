@@ -85,6 +85,7 @@ export class StrategyService {
         this.logger.log(`Call sell target HIT @${price}`)
         await this.ACTION_ExitCESell(price)
         await this.resync(false, true, true)
+        await this.ledgerService.syncLedger()
         this.updateStrategyContext()
         decisionMade = true;
       }
@@ -93,6 +94,7 @@ export class StrategyService {
         this.logger.log(`Can sell call @${price}`)
         await this.ACTION_SellCE(price)
         await this.resync(false, true, true)
+        await this.ledgerService.syncLedger()
         this.updateStrategyContext()
         decisionMade = true;
 
@@ -100,6 +102,7 @@ export class StrategyService {
           this.logger.log(`Can sell equities @${price}`)
           await this.ACTION_SellEquity(price)
           await this.resync(true, false, true)
+          await this.ledgerService.syncLedger()
           this.updateStrategyContext()
           decisionMade = true;
         }
@@ -107,6 +110,7 @@ export class StrategyService {
         this.logger.log(`Can sell equities @${price}`)
         await this.ACTION_SellEquity(price)
         await this.resync(true, false, true)
+        await this.ledgerService.syncLedger()
         this.updateStrategyContext()
         decisionMade = true;
       }
@@ -355,7 +359,7 @@ export class StrategyService {
     quantity: Holding['quantity'],
     lastPrice: Tick['price'],
   ) => {
-    const target = quantity * lastPrice
+    const target = quantity * lastPrice * 0.025
     return target
   }
 }
