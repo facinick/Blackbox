@@ -66,7 +66,7 @@ export class LedgersService {
   */
   @OnEvent(LiveService.Events.OrderUpdateOrderComplete)
   private async onOrderCompleteEvent(update: OrderUpdate) {
-    this.logger.log(`order complete`, update)
+    this.logger.log(`Saving completed order to ledger`, update)
     await this.saveTrade({
       id: update.brokerOrderId,
       tradingsymbol: update.tradingsymbol,

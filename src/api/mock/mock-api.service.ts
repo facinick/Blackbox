@@ -114,11 +114,51 @@ export class MockApiService implements ApiService {
       checksum: '',
     })
 
-    this.logger.debug(`placed order with id:${brokerOrderId}`)
+    setTimeout(()=> this.markOpenOrdersComplete(), 9_000)
+
+    this.logger.debug(`Placed order with id:${brokerOrderId}`)
 
     return {
       brokerOrderId
     }
+  }
+
+  markOpenOrdersComplete = () => {
+    this.zOrders.forEach((zOrder) => {
+      if (zOrder.status === "OPEN") {
+        zOrder.status = "COMPLETE"
+        zOrder.filled_quantity = zOrder.quantity
+        zOrder.average_price = zOrder.price
+      }
+
+      this._onOrderUpdate({
+        ...zOrder,
+        user_id: '',
+        unfilled_quantity: 0,
+        app_id: 0,
+        checksum: '',
+      })
+  
+      this.logger.debug(`Completed order with id:${zOrder.order_id}`)
+    });
+  }
+
+  markOpenOrdersRejected= () => {
+    this.zOrders.forEach((zOrder) => {
+      if (zOrder.status === "OPEN") {
+        zOrder.status = "REJECTED"
+      }
+
+      this._onOrderUpdate({
+        ...zOrder,
+        user_id: '',
+        unfilled_quantity: 0,
+        app_id: 0,
+        checksum: '',
+      })
+  
+      this.logger.debug(`Rejected order with id:${zOrder.order_id}`)
+    });
   }
 
   modifyOrderPrice = async ({ orderId, price }) => {
@@ -135,7 +175,7 @@ export class MockApiService implements ApiService {
       checksum: '',
     })
 
-    this.logger.debug(`modified order with id:${orderId}`)
+    this.logger.debug(`Modified order with id:${orderId}`)
     return {
       brokerOrderId: orderId
     }
@@ -155,7 +195,7 @@ export class MockApiService implements ApiService {
       checksum: '',
     })
 
-    this.logger.debug(`cancelled order with id:${orderId}`)
+    this.logger.debug(`Cancelled order with id:${orderId}`)
 
     return {
       brokerOrderId: orderId
@@ -245,7 +285,7 @@ export class MockApiService implements ApiService {
       if(ticks && ticks.length > 0) {
         this._onTick(ticks)
       }
-    }, 10_000)
+    }, 30_000)
 
     this._onConnect()
     return

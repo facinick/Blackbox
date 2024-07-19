@@ -13,14 +13,9 @@ import {
 import { Equity } from 'src/data/data'
 import { Tick } from 'src/live/live'
 import { AppLogger } from 'src/logger/logger.service'
-import { clamp, Throttle, throttle } from 'src/utils'
+import { clamp, Throttle } from 'src/utils'
 import { Holding } from 'src/portfolio/holdings/holdings'
-import { Mutex } from 'async-mutex';  // Ensure you have async-mutex installed
-
-enum STAGE {
-  SCAN, // process price updates, check if decision can be made
-  LOCK, // a decision can be made, so we won't process any more udpates.
-}
+import { Mutex } from 'async-mutex';
 
 type ExecutionContext = {
   equity: Equity
@@ -33,7 +28,6 @@ type ExecutionContext = {
 @Injectable()
 export class StrategyService {
   private readonly tokens: Set<EquityToken | DerivativeToken> = new Set()
-  private sExecStg: STAGE = STAGE.SCAN
   private processingMutex = new Mutex();
 
   private readonly context: Map<EquityToken, ExecutionContext> = new Map()
@@ -62,8 +56,8 @@ export class StrategyService {
     this.liveService.subscribe(Array.from(this.tokens))
   }
 
+  // @Throttle(30_000)
   @OnEvent(LiveService.Events.Ticks)
-  @Throttle(30_000)
   private async onPriceUpdate(ticks: Tick[]) {
 
     const release = await this.processingMutex.acquire();
@@ -88,6 +82,7 @@ export class StrategyService {
     
     if (this.DECISION_CESellExists()) {
       if (this.DECISION_CESelltargetHit(price)) {
+        this.logger.log(`Call sell target HIT @${price}`)
         await this.ACTION_ExitCESell(price)
         await this.resync(false, true, true)
         this.updateStrategyContext()
@@ -95,18 +90,21 @@ export class StrategyService {
       }
     } else {
       if (this.DECISION_EnoughDaysToSellCE(price)) {
+        this.logger.log(`Can sell call @${price}`)
         await this.ACTION_SellCE(price)
         await this.resync(false, true, true)
         this.updateStrategyContext()
         decisionMade = true;
 
         if (this.DECISION_ShouldSellEquity(price)) {
+          this.logger.log(`Can sell equities @${price}`)
           await this.ACTION_SellEquity(price)
           await this.resync(true, false, true)
           this.updateStrategyContext()
           decisionMade = true;
         }
       } else if (this.DECISION_ShouldSellEquity(price)) {
+        this.logger.log(`Can sell equities @${price}`)
         await this.ACTION_SellEquity(price)
         await this.resync(true, false, true)
         this.updateStrategyContext()
@@ -119,22 +117,18 @@ export class StrategyService {
 
   // DECISION BLOCKS ---------------------------------- //
   private DECISION_CESellExists = () => {
-    this.logger.debug(`[DECISION BLOCK] Checking if call sell position exists`)
     const context = this.context.get(this.currentToken)
 
     const ceSellPosition = context.existingCallOption
 
     if (ceSellPosition) {
-      this.logger.log(`[DECISION BLOCK] Position exists`, ceSellPosition)
       return true
     }
 
-    this.logger.debug(`[DECISION BLOCK] Position doesn't exist`)
     return false
   }
 
   private DECISION_CESelltargetHit = (equityCmp: number) => {
-    this.logger.debug(`[DECISION BLOCK] Checking if call sell target is hit`)
     const context = this.context.get(this.currentToken)
 
     const ceSellPosition = context.existingCallOption
@@ -144,9 +138,6 @@ export class StrategyService {
     }
 
     if (equityCmp > ceSellPosition.averagePrice + ceSellPosition.strike) {
-      this.logger.log(
-        `[DECISION BLOCK] Hit | EquityCmp > ceSellPosition.averagePrice + ceSellPosition.strike, ${equityCmp > ceSellPosition.averagePrice + ceSellPosition.strike}`,
-      )
       return true
     }
 
@@ -154,9 +145,6 @@ export class StrategyService {
   }
 
   private DECISION_EnoughDaysToSellCE = (equityCmp: number) => {
-    this.logger.debug(
-      `[DECISION BLOCK] Checking if enough days left till expiry`,
-    )
     const context = this.context.get(this.currentToken)
 
     const availableOTMCallOption = DataService.getAvailableOTMCallOptionFor(
@@ -165,36 +153,20 @@ export class StrategyService {
       equityCmp,
     )
 
-    this.logger.log(`available OTM call option`, availableOTMCallOption)
-
     if (!availableOTMCallOption) {
-      this.logger.warn(
-        `No OTM call options to sell for equity: ${this.currentToken} and for CMP: ${equityCmp}`,
-      )
       return false
     }
-
-    this.logger.log(`checking if the call option has >=3 days to expiry`)
 
     if (
       !DataService.hasNPlusDaysToExpiry(availableOTMCallOption.tradingsymbol, 3)
     ) {
-      this.logger.warn(
-        `[DECISION BLOCK] Not enough days left to expiry of available OTM call option, can't sell`,
-      )
       return false
     }
-
-    this.logger.log(
-      `yes we can sell a call`,
-      availableOTMCallOption.tradingsymbol,
-    )
 
     return true
   }
 
   private DECISION_ShouldSellEquity = (equityCmp: number) => {
-    this.logger.debug(`[DECISION BLOCK] checking if should sell equity`)
     const context = this.context.get(this.currentToken)
 
     const target = this.calculateTarget(
@@ -202,10 +174,7 @@ export class StrategyService {
       equityCmp,
     )
 
-    this.logger.debug(`[DECISION BLOCK] target:`, target)
-
     if (context.cash < target && context.existingStocksQuantity > 0) {
-      this.logger.debug(`[DECISION BLOCK] cash:`, context.cash)
       return true
     }
 
@@ -215,6 +184,7 @@ export class StrategyService {
 
   // ACTION BLOCKS ---------------------------------- //
   private ACTION_SellCE = async (equityCmp: number) => {
+    this.logger.log(`ACTION: sell call`)
     const context = this.context.get(this.currentToken)
 
     const availableOTMCallOption = DataService.getAvailableOTMCallOptionFor(
@@ -230,12 +200,13 @@ export class StrategyService {
       return true
     }
 
-    this.logger.log(`[ACTION BLOCK] getting ltp for derivative: ${availableOTMCallOption.tradingsymbol}`)
     const ltpRecord = await this.apiService.getDerivativeLtp([
       availableOTMCallOption.tradingsymbol,
     ])
 
     const currentMonth = DataService.getToday().month
+
+    this.logger.log(`Building new order to sell call`)
 
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: availableOTMCallOption.tradingsymbol,
@@ -245,13 +216,13 @@ export class StrategyService {
       tag: `${context.equity.tradingsymbol}_${currentMonth}_CESELL`,
     }
 
-    this.logger.log(`Order to execute:`, newOrder)
+    this.logger.log(`Sending new order to order manager:`, newOrder)
 
     await this.orderManagerService.execute([newOrder])
   }
 
   private ACTION_ExitCESell = async (equityCmp: number) => {
-    this.logger.debug(`Action exit CE sell`)
+    this.logger.log(`ACTION: exit existing call sell position`)
     const context = this.context.get(this.currentToken)
 
     if (!context.existingCallOption) {
@@ -263,11 +234,10 @@ export class StrategyService {
       context.existingCallOption.tradingsymbol,
     ])
 
-    this.logger.debug(`CE latest price:`, ltpRecord)
-
     const currentMonth = DataService.getToday().month
 
-    this.logger.debug(`Building new order to exit call`)
+    this.logger.log(`Building new order to exit existing call sell`)
+    
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: context.existingCallOption.tradingsymbol,
       price: ltpRecord[context.existingCallOption.tradingsymbol].price,
@@ -276,12 +246,13 @@ export class StrategyService {
       tag: `${context.equity.tradingsymbol}_${currentMonth}_SQOFF`,
     }
 
-    this.logger.log(`Sending order to order manager:`, newOrder)
+    this.logger.log(`Sending new order to order manager:`, newOrder)
 
     await this.orderManagerService.execute([newOrder])
   }
 
   private ACTION_SellEquity = async (equityCmp: number) => {
+    this.logger.log(`ACTION: sell equity`)
     const context = this.context.get(this.currentToken)
 
     const currentMonth = DataService.getToday().month
@@ -304,6 +275,8 @@ export class StrategyService {
       return
     }
 
+    this.logger.log(`Building new order sell equities`)
+
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: context.equity.tradingsymbol,
       price: equityCmp,
@@ -311,6 +284,8 @@ export class StrategyService {
       buyOrSell: 'SELL',
       tag: `${context.equity.tradingsymbol}_${currentMonth}_EQSELL`,
     }
+
+    this.logger.log(`Sending new order to order manager:`, newOrder)
 
     await this.orderManagerService.execute([newOrder])
   }
