@@ -38,6 +38,7 @@ export class AppService {
       this.logger.log(`Strategy service initialized`)
     } catch (error) {
       this.logger.error(`Error initializing app`, error)
+      throw error
     }
   }
 }
