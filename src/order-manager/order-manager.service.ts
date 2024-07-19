@@ -13,15 +13,6 @@ type ExecuteOrderDto = {
   tag: string
 }
 
-type OrderBookRecord = {
-  brokerOrderId: string
-  action: 'placed' | 'executed' | 'cancelled'
-  tradingsymbol: Tradingsymbol
-  price: number
-  quantity: number
-  buyOrSell: BuyOrSell
-}
-
 type OrderRequest = {
   orderManagerOrderId: string
   tradingsymbol: Tradingsymbol
@@ -30,12 +21,6 @@ type OrderRequest = {
   buyOrSell: BuyOrSell
   tag: string
 }
-
-/*
-emits:
-order-manager.started
-order-manager.stopped
-*/
 
 @Injectable()
 class OrderManagerService {
@@ -58,17 +43,12 @@ class OrderManagerService {
     if (this.lock) {
       return
     }
-
+    
+    this.logger.log(`================ Order Manager Execution Started ================`)
     this.lock = true
-    this.eventEmitter.emit('order-manager.started')
+    this.initialize(orderDtos)
+    this.logger.log(`starting execution of ${this.orderBasket.size} orders`)
 
-    this.initializeOrderBasket(orderDtos) // Initialize order basket with provided orders
-
-    // ensure all orders reach completion
-    this.logger.log(
-      `starting execution of ${this.orderBasket.size} orders`,
-      this.orderBasket.values(),
-    )
     await Promise.allSettled(
       Array.from(this.orderBasket).map((orderRequest) => {
         return new Promise((resolve, reject) => {
@@ -88,10 +68,16 @@ class OrderManagerService {
 
     this.logger.log(`finished execution of ${this.orderBasket.size} orders`)
     this.lock = false
-    this.eventEmitter.emit('order-manager.stopped')
+    this.reset()
+    this.logger.log(`================ Order Manager Execution Finished ================`)
   }
 
-  private initializeOrderBasket(orderDtos: Array<ExecuteOrderDto>) {
+  private reset = () => {
+    this.orderBasket.clear()
+    this.orderHandlers.clear()
+  }
+
+  private initialize = (orderDtos: Array<ExecuteOrderDto>) => {
     orderDtos.forEach((orderDto, index) => {
       this.orderBasket.add({
         ...orderDto,

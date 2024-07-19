@@ -10,4 +10,36 @@ type Order = {
   tag: string
 }
 
-export { Order }
+type PlaceOrder = {
+  Request: {
+      tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol
+      buyOrSell: BuyOrSell
+      quantity: number
+      price: number
+      tag: string
+  },
+  Response: {
+    brokerOrderId: string
+  }
+}
+
+type ModifyOrderPrice = {
+  Request: {
+      orderId: string
+      price: number
+  },
+  Response: {
+    brokerOrderId: string
+  }
+}
+
+type CancelOrder = {
+  Request: {
+      orderId: string
+  },
+  Response: {
+    brokerOrderId: string
+  }
+}
+
+export { Order, PlaceOrder, ModifyOrderPrice, CancelOrder }

@@ -18,8 +18,8 @@ export const BalancesMapper = {
     return {
       cash,
       openingBalance,
-      liveBalance,
-      adhocMargin,
+      // liveBalance,
+      // adhocMargin,
     }
   },
 }

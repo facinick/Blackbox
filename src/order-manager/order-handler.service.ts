@@ -27,14 +27,14 @@ class OrderHandler {
   // placed orders will have this not undefined
   private brokerOrderId: string
   // retry with price adjustments
-  private MAX_PRICE_ADJUSTMENT_ATTEMPTS = 3
-  private MAX_PRICE_ADJUSTMENT_TICK_MULTIPLE = 5
-  private lastPrice
-  private priceAdjustments: 0
+  private MAX_PRICE_ADJUSTMENT_ATTEMPTS: number = 3
+  private MAX_PRICE_ADJUSTMENT_TICK_MULTIPLE: number = 5
+  private lastPrice: number
+  private priceAdjustments: number = 0
   private lastPriceAdjustmentTimestamp: number
   // regularly handle this order
   private timer: NodeJS.Timeout
-  private RETRY_INTERVAL_MS = 15_000
+  private RETRY_INTERVAL_MS: number = 15_000
 
   private status:
     | 'initial' //
@@ -52,17 +52,16 @@ class OrderHandler {
   ) {
     this.lastPrice = orderRequest.price
     this.logger.setContext(
-      `${this.constructor.name} ${(Math.random() * 100).toFixed(2)}`,
+      `${this.constructor.name} ${(Math.random() * 1000).toFixed(0)}`,
     )
   }
 
   public execute = async () => {
-    console.log(`executing order`)
+    this.logger.log(`executing order`)
     this.eventEmitter.emit(`order-handler.${this.status}`)
     try {
-      this.brokerOrderId = await withRetry(this.placeOrder.bind(this))
-      console.log(`done`, this.brokerOrderId)
       this.start()
+      this.brokerOrderId = (await withRetry<Awaited<ReturnType<OrderHandler['placeOrder']>>>(this.placeOrder.bind(this))).brokerOrderId
     } catch (error) {
       console.error(`failed`, error)
       this.status = 'done'
@@ -71,26 +70,24 @@ class OrderHandler {
   }
 
   private start = () => {
-    this.logger.log(`starting order manage timer`)
+    this.logger.log(`starting order handler timer`)
     this.timer = setTimeout(this.manageOrder, this.RETRY_INTERVAL_MS)
   }
 
   private stop = () => {
-    this.logger.log(`stopping order manage timer`)
+    this.logger.log(`stopping order handler timer`)
     clearTimeout(this.timer)
     this.eventEmitter.emit(`order-handler.${this.status}`)
   }
 
   private manageOrder = async () => {
-    this.logger.log(`managing order`)
+    this.logger.log(`${this.RETRY_INTERVAL_MS} ms passed since placing order, order not completed yet, managing.`)
     clearTimeout(this.timer)
 
     // MODIFY ORDER PRICE
     if (this.priceAdjustments < this.MAX_PRICE_ADJUSTMENT_ATTEMPTS) {
       try {
-        console.log(`modifying open order`)
-        this.lastPrice = await withRetry(this.modifyOrder.bind(this))
-        console.log(`done modifying order`)
+        this.lastPrice = await withRetry<Awaited<ReturnType<OrderHandler['modifyOrder']>>>(this.modifyOrder.bind(this))
         this.priceAdjustments++
         this.lastPriceAdjustmentTimestamp = Date.now()
         this.timer = setTimeout(this.manageOrder, this.RETRY_INTERVAL_MS)
@@ -103,9 +100,7 @@ class OrderHandler {
     // CANCEL ORDER
     else {
       try {
-        console.log(`cancelling open order`)
-        await withRetry(this.cancelOrder.bind(this))
-        console.log(`done cancelling order`)
+        await withRetry<Awaited<ReturnType<OrderHandler['cancelOrder']>>>(this.cancelOrder.bind(this))
         this.status = 'done'
         this.stop()
       } catch (error) {

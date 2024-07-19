@@ -63,8 +63,6 @@ export class StrategyService {
   @OnEvent(LiveService.Events.Ticks)
   @Throttle(30_000)
   private onPriceUpdate(ticks: Tick[]): void {
-    this.logger.debug(`Processing price update`, ticks)
-
     if (this.sExecStg === STAGE.LOCK) {
       this.logger.debug(`Strategy is locked, returning`)
       return
@@ -83,6 +81,7 @@ export class StrategyService {
         this.logger.log(
           `Strategy condition true for token: ${this.currentToken} at CMP: ${tick.price}`,
         )
+        this.logger.log(`locking strategy`)
         this.sExecStg = STAGE.LOCK
         this.executeStrategy(tick)
         break
@@ -114,6 +113,7 @@ export class StrategyService {
         this.updateStrategyContext()
       }
     }
+    this.logger.log(`unlocking strategy`)
     this.sExecStg = STAGE.SCAN
   }
 
@@ -250,6 +250,7 @@ export class StrategyService {
       return true
     }
 
+    this.logger.log(`[ACTION BLOCK] getting ltp for derivative: ${availableOTMCallOption.tradingsymbol}`)
     const ltpRecord = await this.apiService.getDerivativeLtp([
       availableOTMCallOption.tradingsymbol,
     ])
