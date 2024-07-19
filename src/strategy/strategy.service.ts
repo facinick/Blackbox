@@ -15,6 +15,7 @@ import { Tick } from 'src/live/live'
 import { AppLogger } from 'src/logger/logger.service'
 import { clamp, Throttle, throttle } from 'src/utils'
 import { Holding } from 'src/portfolio/holdings/holdings'
+import { Mutex } from 'async-mutex';  // Ensure you have async-mutex installed
 
 enum STAGE {
   SCAN, // process price updates, check if decision can be made
@@ -33,6 +34,7 @@ type ExecutionContext = {
 export class StrategyService {
   private readonly tokens: Set<EquityToken | DerivativeToken> = new Set()
   private sExecStg: STAGE = STAGE.SCAN
+  private processingMutex = new Mutex();
 
   private readonly context: Map<EquityToken, ExecutionContext> = new Map()
   private currentToken: EquityToken | undefined
@@ -62,11 +64,9 @@ export class StrategyService {
 
   @OnEvent(LiveService.Events.Ticks)
   @Throttle(30_000)
-  private onPriceUpdate(ticks: Tick[]): void {
-    if (this.sExecStg === STAGE.LOCK) {
-      this.logger.debug(`Strategy is locked, returning`)
-      return
-    }
+  private async onPriceUpdate(ticks: Tick[]) {
+
+    const release = await this.processingMutex.acquire();
 
     for (const tick of ticks) {
       if (!this.tokens.has(tick.token)) {
@@ -74,67 +74,47 @@ export class StrategyService {
       }
 
       this.updateCurrentToken(tick.token)
-      if (
-        this.isAnyStrategyConditionTrue(tick.price) &&
-        this.sExecStg === STAGE.SCAN
-      ) {
-        this.logger.log(
-          `Strategy condition true for token: ${this.currentToken} at CMP: ${tick.price}`,
-        )
-        this.logger.log(`locking strategy`)
-        this.sExecStg = STAGE.LOCK
-        this.executeStrategy(tick)
+      const decision = await this.execute(tick);
+      if(decision) {
         break
       }
     }
+
+    release();
   }
 
-  private executeStrategy = async ({ price }: Tick) => {
+  private execute = async ({ price }: Tick) => {
+    let decisionMade = false;
+    
     if (this.DECISION_CESellExists()) {
       if (this.DECISION_CESelltargetHit(price)) {
         await this.ACTION_ExitCESell(price)
         await this.resync(false, true, true)
         this.updateStrategyContext()
+        decisionMade = true;
       }
     } else {
       if (this.DECISION_EnoughDaysToSellCE(price)) {
         await this.ACTION_SellCE(price)
         await this.resync(false, true, true)
         this.updateStrategyContext()
+        decisionMade = true;
 
         if (this.DECISION_ShouldSellEquity(price)) {
           await this.ACTION_SellEquity(price)
           await this.resync(true, false, true)
           this.updateStrategyContext()
+          decisionMade = true;
         }
       } else if (this.DECISION_ShouldSellEquity(price)) {
         await this.ACTION_SellEquity(price)
         await this.resync(true, false, true)
         this.updateStrategyContext()
+        decisionMade = true;
       }
     }
-    this.logger.log(`unlocking strategy`)
-    this.sExecStg = STAGE.SCAN
-  }
-
-  private isAnyStrategyConditionTrue = (equityCmp: number) => {
-    this.logger.debug(
-      `Checking strategy condition for ${this.currentToken} at CMP: ${equityCmp}`,
-    )
-    if (this.DECISION_CESellExists()) {
-      if (this.DECISION_CESelltargetHit(equityCmp)) {
-        this.logger.debug(`Target hit for existing call sell`)
-        return true
-      }
-    } else {
-      if (this.DECISION_EnoughDaysToSellCE(equityCmp)) {
-        this.logger.debug(`Enough days to sell CE`)
-        return true
-      } else if (this.DECISION_ShouldSellEquity(equityCmp)) {
-        this.logger.debug(`Sell stocks for cash`)
-        return true
-      }
-    }
+    
+    return decisionMade;
   }
 
   // DECISION BLOCKS ---------------------------------- //
@@ -345,7 +325,6 @@ export class StrategyService {
   }
 
   private updateCurrentToken = (token: Token) => {
-    this.logger.log(`Current token: ${token}`)
     this.currentToken = token
   }
 
