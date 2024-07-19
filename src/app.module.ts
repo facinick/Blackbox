@@ -12,8 +12,6 @@ import { AppLoggerModule } from './logger/logger.module'
 import { ApiModule } from './api/api.module'
 import { TokenService } from './token.service'
 import { PrismaModule } from './prisma/prisma.module'
-import { ZerodhaApiService } from './api/zerodha.api.service'
-import { API_SERVICE } from './api/api.service'
 import { AppService } from './app.service'
 
 @Module({
