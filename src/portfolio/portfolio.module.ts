@@ -5,7 +5,6 @@ import { PositionsService } from './positions/positions.service';
 import { HoldingsService } from './holdings/holdings.service';
 import { LiveModule } from 'src/live/live.module';
 import { BalancesService } from './balances/balances.service';
-import { ApiModule } from 'src/api/api.module';
 import { DataModule } from 'src/data/data.module';
 
 @Module({
@@ -16,6 +15,6 @@ import { DataModule } from 'src/data/data.module';
     HoldingsService,
   ],
   exports: [PortfolioService],
-  imports: [LiveModule, ApiModule, DataModule],
+  imports: [LiveModule, DataModule],
 })
 export class PortfoliosModule {}

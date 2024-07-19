@@ -5,10 +5,22 @@ import { LiveService } from './live/live.service';
 import { PortfolioService } from './portfolio/portfolio.service';
 import { StrategyService } from './strategy/strategy.service';
 import { AppLogger } from './logger/logger.service';
+import { ApiService } from './api/api.service';
+import { TokenService } from './token.service';
+import { ConfigService } from '@nestjs/config';
+
+export type Auth = {
+  accessToken: string
+}
+
+export type Profile = {
+  userId: string
+}
 
 @Injectable()
 export class AppService {
   constructor(
+    private readonly apiService: ApiService,
     private readonly dataService: DataService,
     private readonly liveService: LiveService,
     private readonly portfolioService: PortfolioService,
@@ -19,17 +31,23 @@ export class AppService {
     this.logger.setContext(this.constructor.name);
   }
 
-  // assuming we are authenticated, and ticker is setup by now
-  async initialize() {
-    await this.dataService.initialize();
-    this.logger.log(`Data service initialised`);
-    await this.liveService.initialize();
-    this.logger.log(`Live service initialized`);
-    await this.portfolioService.initialize();
-    this.logger.log(`Portfolio service initialized`);
-    await this.ledgerService.initialize();
-    this.logger.log(`Ledger service initialized`);
-    await this.strategyService.initialize();
-    this.logger.log(`Strategy service initialized`);
+  async initialize(accessToken: string, apiKey: string) {
+
+    try {
+      await this.apiService.initialize(accessToken, apiKey)
+      this.logger.log(`API service initialised`);
+      await this.dataService.initialize();
+      this.logger.log(`Data service initialised`);
+      await this.liveService.initialize();
+      this.logger.log(`Live service initialized`);
+      await this.portfolioService.initialize();
+      this.logger.log(`Portfolio service initialized`);
+      await this.ledgerService.initialize();
+      this.logger.log(`Ledger service initialized`);
+      await this.strategyService.initialize();
+      this.logger.log(`Strategy service initialized`);
+    } catch(error) {
+      this.logger.error(`Error initializing app`, error)
+    }
   }
 }

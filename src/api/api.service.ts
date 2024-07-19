@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { KiteConnect, KiteTicker } from 'kiteconnect';
 import { DataService } from 'src/data/data.service';
-import { ConfigService } from '@nestjs/config';
 import { HoldingsApiPort } from 'src/portfolio/holdings/holdings.api.port';
 import { HoldingsMapper } from 'src/portfolio/holdings/holdings.zerodha.mapper';
 import { BalancesMapper } from 'src/portfolio/balances/balances.zerodha.mapper';
@@ -18,6 +17,7 @@ import { OrderUpdate, Tick } from 'src/live/live';
 import { LiveApiPort } from 'src/live/live.api.port';
 import { QuotesMapper } from 'src/strategy/quotes.zerodha.mapper';
 import { QuotesApiPort } from 'src/strategy/quotes.api.port';
+import { Profile } from 'src/app.service';
 
 @Injectable()
 export class ApiService implements 
@@ -42,27 +42,29 @@ export class ApiService implements
   private wsNoreconnectListeners: Set<() => void> = new Set()
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly logger: AppLogger
   ) {
+    this.logger.setContext(this.constructor.name);
+  }
+
+  initialize = async (accessToken: string, apiKey: string): Promise<void> => {
     try {
-      this.kc = new KiteConnect({
-        api_key: configService.get("ZERODHA_API_KEY")
-      });
-      this.logger.setContext(this.constructor.name);
+      this.kc = new KiteConnect({ api_key: apiKey });
+      this.setAccessToken(accessToken)
+      await this.kc.getProfile()
+      this.initializeTicker(accessToken, apiKey)
     } catch (error) {
       this.logger.error('Error initializing KiteConnect', error);
       throw error;
     }
   }
 
-  initializeTicker(accessToken) {
+  initializeTicker(accessToken, apiKey: string) {
     try {
       this.ticker = new KiteTicker({
-        api_key: this.configService.get("ZERODHA_API_KEY"),
+        api_key: apiKey,
         access_token: accessToken,
       });
-
       this.ticker.on('ticks', this._onTick)
       this.ticker.on('order_update', this._onOrderUpdate)
       this.ticker.on('connect', this._onConnect)
@@ -89,14 +91,27 @@ export class ApiService implements
     }
   }
 
+  getProfile = async (): Promise<Profile> => {
+    try {
+      const profile = await this.kc.getProfile()
+      return {
+        userId: profile.user_id
+      };
+    } catch (error) {
+      this.logger.error('Error getting profile', error);
+      throw error;
+    }
+  }
+
   placeOrder = async (placeOrderDto: {
     tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol;
     buyOrSell: BuyOrSell;
     quantity: number;
     price: number;
+    tag: string;
   }): Promise<string> => {
     try {
-      const { tradingsymbol, buyOrSell, quantity, price } = placeOrderDto;
+      const { tradingsymbol, buyOrSell, quantity, price, tag } = placeOrderDto;
 
       let exchange, product;
 
@@ -118,6 +133,7 @@ export class ApiService implements
         quantity,
         product,
         price,
+        tag,
         order_type: 'LIMIT',
       };
 
@@ -239,9 +255,9 @@ export class ApiService implements
     }
   }
 
-  getLoginURL = async () => {
+  getLoginURL = () => {
     try {
-      return await this.kc.getLoginURL();
+      return this.kc.getLoginURL();
     } catch (error) {
       this.logger.error('Error getting login URL', error);
       throw error;

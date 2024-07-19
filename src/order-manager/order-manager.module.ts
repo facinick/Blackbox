@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ApiModule } from 'src/api/api.module';
 import { ApiService } from 'src/api/api.service';
-import { DataService } from 'src/data/data.service';
 import {
   AdjustByTick,
   OrderHandler,
@@ -36,7 +34,7 @@ const orderHandlerFactory = {
 };
 
 @Module({
-  imports: [ApiModule, DataModule],
+  imports: [DataModule],
   providers: [
     OrderManagerService,
     orderHandlerFactory,

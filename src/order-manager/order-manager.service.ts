@@ -28,6 +28,7 @@ type OrderRequest = {
   price: number;
   quantity: number;
   buyOrSell: BuyOrSell;
+  tag: string
 };
 
 /*

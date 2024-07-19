@@ -1,7 +1,5 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { ApiModule } from './api/api.module';
+import { Module } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DataModule } from './data/data.module';
@@ -12,14 +10,17 @@ import { StrategyModule } from './strategy/strategy.module';
 import { AppController } from './app.controller';
 import { OrderManagerModule } from './order-manager/order-manager.module';
 import { AppLoggerModule } from './logger/logger.module';
-import { OnLoadRedirectMiddleware } from './middlewares';
+import { ApiModule } from './api/api.module';
+import { TokenService } from './token.service';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
-    AppLoggerModule,
+    AppLoggerModule, // for root
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
-    AuthModule,
+    PrismaModule,
+    ApiModule, // for root
     LiveModule,
     DataModule,
     PortfoliosModule,
@@ -27,11 +28,11 @@ import { OnLoadRedirectMiddleware } from './middlewares';
     LedgerModule,
     StrategyModule,
   ],
-  providers: [AppService],
+  providers: [AppService, TokenService],
   controllers: [AppController],
 })
 export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(OnLoadRedirectMiddleware).forRoutes('*');
-  }
+  // configure(consumer: MiddlewareConsumer) {
+  //   consumer.apply(OnLoadRedirectMiddleware).forRoutes('*');
+  // }
 }
