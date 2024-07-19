@@ -6,16 +6,6 @@ import { PortfolioService } from './portfolio/portfolio.service';
 import { StrategyService } from './strategy/strategy.service';
 import { AppLogger } from './logger/logger.service';
 import { ApiService } from './api/api.service';
-import { TokenService } from './token.service';
-import { ConfigService } from '@nestjs/config';
-
-export type Auth = {
-  accessToken: string
-}
-
-export type Profile = {
-  userId: string
-}
 
 @Injectable()
 export class AppService {

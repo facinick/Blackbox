@@ -17,7 +17,6 @@ import { OrderUpdate, Tick } from 'src/live/live';
 import { LiveApiPort } from 'src/live/live.api.port';
 import { QuotesMapper } from 'src/strategy/quotes.zerodha.mapper';
 import { QuotesApiPort } from 'src/strategy/quotes.api.port';
-import { Profile } from 'src/app.service';
 
 @Injectable()
 export class ApiService implements 
@@ -91,17 +90,17 @@ export class ApiService implements
     }
   }
 
-  getProfile = async (): Promise<Profile> => {
-    try {
-      const profile = await this.kc.getProfile()
-      return {
-        userId: profile.user_id
-      };
-    } catch (error) {
-      this.logger.error('Error getting profile', error);
-      throw error;
-    }
-  }
+  // getProfile = async (): Promise<Profile> => {
+  //   try {
+  //     const profile = await this.kc.getProfile()
+  //     return {
+  //       userId: profile.user_id
+  //     };
+  //   } catch (error) {
+  //     this.logger.error('Error getting profile', error);
+  //     throw error;
+  //   }
+  // }
 
   placeOrder = async (placeOrderDto: {
     tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol;

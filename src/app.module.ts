@@ -31,8 +31,4 @@ import { PrismaModule } from './prisma/prisma.module';
   providers: [AppService, TokenService],
   controllers: [AppController],
 })
-export class AppModule {
-  // configure(consumer: MiddlewareConsumer) {
-  //   consumer.apply(OnLoadRedirectMiddleware).forRoutes('*');
-  // }
-}
+export class AppModule { }
