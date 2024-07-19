@@ -80,7 +80,7 @@ export class LiveService {
 
       case 'UPDATE': {
         this.eventEmitter.emit(
-          LiveService.Events.OrderUpdateOrderComplete,
+          LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete,
           update,
         )
         break
