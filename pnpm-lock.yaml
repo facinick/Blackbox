@@ -32,6 +32,9 @@ dependencies:
   '@prisma/client':
     specifier: 5.16.1
     version: 5.16.1(prisma@5.16.1)
+  csv-parser:
+    specifier: ^3.0.0
+    version: 3.0.0
   kiteconnect:
     specifier: ^5.0.0
     version: 5.0.0
@@ -2361,6 +2364,14 @@ packages:
 
   /crypto-js@4.2.0:
     resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
+    dev: false
+
+  /csv-parser@3.0.0:
+    resolution: {integrity: sha512-s6OYSXAK3IdKqYO33y09jhypG/bSDHPuyCme/IdEHfWpLf/jKcpitVFyOC6UemgGk8v7Q5u2XE0vvwmanxhGlQ==}
+    engines: {node: '>= 10'}
+    hasBin: true
+    dependencies:
+      minimist: 1.2.8
     dev: false
 
   /debug@2.6.9:
