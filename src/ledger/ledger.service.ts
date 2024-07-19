@@ -1,51 +1,51 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
-import { Trade } from './ledger';
-import { LEDGER_STORE_PORT, LedgerStorePort } from './ledger.store.port';
-import { randomUUID } from 'crypto';
-import { OrderUpdate } from 'src/live/live';
-import { LiveService } from 'src/live/live.service';
-import { AppLogger } from 'src/logger/logger.service';
+import { Inject, Injectable } from '@nestjs/common'
+import { OnEvent } from '@nestjs/event-emitter'
+import { Trade } from './ledger'
+import { LEDGER_STORE_PORT, LedgerStorePort } from './ledger.store.port'
+import { randomUUID } from 'crypto'
+import { OrderUpdate } from 'src/live/live'
+import { LiveService } from 'src/live/live.service'
+import { AppLogger } from 'src/logger/logger.service'
 
 @Injectable()
 export class LedgersService {
-  private trades: Trade[];
+  private trades: Trade[]
 
   constructor(
     @Inject(LEDGER_STORE_PORT)
     private readonly storage: LedgerStorePort,
     private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name);
+    this.logger.setContext(this.constructor.name)
   }
 
   async initialize() {
-    await this.syncLedger();
+    await this.syncLedger()
   }
 
   public async syncLedger() {
-    this.trades = await this.storage.getTrades();
+    this.trades = await this.storage.getTrades()
   }
 
   public getTrades() {
-    return this.trades;
+    return this.trades
   }
 
   public getTradesByTag(tag: string) {
-    return this.trades.filter((trade) => trade.tag.startsWith(tag));
+    return this.trades.filter((trade) => trade.tag.startsWith(tag))
   }
 
   // mutation, after this make sure to load ledger again
   public async saveTrade(trade: Trade) {
-    await this.storage.saveTrade(trade);
+    await this.storage.saveTrade(trade)
   }
 
   static create = (createTradeDto: Omit<Trade, 'id'>) => {
     return {
       ...createTradeDto,
       id: randomUUID(),
-    };
-  };
+    }
+  }
 
   /*
     brokerOrderId: string;
@@ -66,7 +66,7 @@ export class LedgersService {
   */
   @OnEvent(LiveService.Events.OrderUpdateOrderComplete)
   private async onOrderCompleteEvent(update: OrderUpdate) {
-    this.logger.log(`order complete`, update);
+    this.logger.log(`order complete`, update)
     await this.saveTrade({
       id: update.brokerOrderId,
       tradingsymbol: update.tradingsymbol,
@@ -77,7 +77,7 @@ export class LedgersService {
       instrumentType: update.instrumentType,
       segment: update.segment,
       buyOrSell: update.buyOrSell,
-      tag: update.tag
+      tag: update.tag,
     })
   }
 
@@ -100,6 +100,6 @@ export class LedgersService {
 
   @OnEvent(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete)
   private onOrderModifiedOrPartialCompleteEvent(update: OrderUpdate) {
-    this.logger.log(`order partial update`, update);
+    this.logger.log(`order partial update`, update)
   }
 }

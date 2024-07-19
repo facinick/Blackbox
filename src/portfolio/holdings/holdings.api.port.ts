@@ -1,7 +1,7 @@
-import { Holding } from './holdings';
+import { Holding } from './holdings'
 
 interface HoldingsApiPort {
-  getHoldings: () => Promise<Holding[]>;
+  getHoldings: () => Promise<Holding[]>
 }
 
-export { HoldingsApiPort };
+export { HoldingsApiPort }

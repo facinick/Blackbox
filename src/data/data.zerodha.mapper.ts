@@ -1,5 +1,5 @@
-import { KiteConnect } from 'kiteconnect';
-import { Instrument } from './data';
+import { KiteConnect } from 'kiteconnect'
+import { Instrument } from './data'
 
 export const InstrumentMapper = {
   toDomain: (
@@ -17,6 +17,6 @@ export const InstrumentMapper = {
       instrumentType: instrument.instrument_type as InstrumentType,
       segment: instrument.segment as Segment,
       exchange: instrument.exchange,
-    };
+    }
   },
-};
+}

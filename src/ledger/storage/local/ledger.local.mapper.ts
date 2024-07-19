@@ -1,6 +1,6 @@
-import { Trade } from '../../ledger';
+import { Trade } from '../../ledger'
 
-import { Trade as PrismaTrade } from '@prisma/client';
+import { Trade as PrismaTrade } from '@prisma/client'
 
 export const LedgerMpper = {
   toDomain(trade: PrismaTrade): Trade {
@@ -15,7 +15,7 @@ export const LedgerMpper = {
       exchange: trade.exchange as Exchange,
       buyOrSell: trade.buyOrSell as BuyOrSell,
       tag: trade.tag,
-    };
+    }
   },
   toPersistence(trade: Trade): PrismaTrade {
     return {
@@ -29,6 +29,6 @@ export const LedgerMpper = {
       exchange: trade.exchange as Exchange,
       buyOrSell: trade.buyOrSell as BuyOrSell,
       tag: trade.tag,
-    };
+    }
   },
-};
+}

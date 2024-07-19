@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ApiService } from 'src/api/api.service';
-import { AppLogger } from 'src/logger/logger.service';
-import { OrderUpdate, Tick } from './live';
+import { Inject, Injectable } from '@nestjs/common'
+import { EventEmitter2 } from '@nestjs/event-emitter'
+import { API_SERVICE, ApiService } from 'src/api/api.service'
+import { AppLogger } from 'src/logger/logger.service'
+import { OrderUpdate, Tick } from './live'
 
 @Injectable()
 export class LiveService {
@@ -13,144 +13,141 @@ export class LiveService {
     OrderUpdateOrderComplete: 'live.order.complete',
     OrderUpdateOrderModifiedOrPartialComplete: 'live.order.modifiedOrPartial',
     Ticks: 'live.ticks',
-  };
+  }
 
-  private subscribedTokens: Set<EquityToken | DerivativeToken> = new Set();
+  private subscribedTokens: Set<EquityToken | DerivativeToken> = new Set()
 
   constructor(
+    @Inject(API_SERVICE)
     private readonly apiService: ApiService,
     private readonly eventEmitter: EventEmitter2,
     private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name);
+    this.logger.setContext(this.constructor.name)
   }
 
   initialize = async () => {
     return new Promise((resolve, reject) => {
-      this.logger.log(`Setting up live data listeners`);
-      this.apiService.registerForPriceUpdates((ticks) =>
-        this.handleTick(ticks),
-      );
-      this.apiService.registerForOrderUpdates(
-        this.handleOrderUpdate.bind(this),
-      );
+      this.logger.log(`Setting up live data listeners`)
+      this.apiService.registerForPriceUpdates((ticks) => this.handleTick(ticks))
+      this.apiService.registerForOrderUpdates(this.handleOrderUpdate.bind(this))
       this.apiService.registerForConnect(() => {
-        this.wsConnected();
-        resolve({});
-      });
-      this.apiService.registerForDisconnect(this.wsDisconnected);
-      this.apiService.registerForError(this.wsClosedWithError);
-      this.apiService.registerForClose(this.wsClosed);
-      this.apiService.registerForReconnect(this.wsReconnecting);
+        this.wsConnected()
+        resolve({})
+      })
+      this.apiService.registerForDisconnect(this.wsDisconnected)
+      this.apiService.registerForError(this.wsClosedWithError)
+      this.apiService.registerForClose(this.wsClosed)
+      this.apiService.registerForReconnect(this.wsReconnecting)
       this.apiService.registerForNoreconnect(
         this.wsExhaustedReconnectionAttempts,
-      );
-      this.logger.log(`Connecting ticker...`);
-      this.connect();
-    });
-  };
+      )
+      this.logger.log(`Connecting ticker...`)
+      this.connect()
+    })
+  }
 
   private handleOrderUpdate = (update: OrderUpdate) => {
     switch (update.status) {
       case 'OPEN': {
-        this.eventEmitter.emit(LiveService.Events.OrderUpdateOrderOpen, update);
-        break;
+        this.eventEmitter.emit(LiveService.Events.OrderUpdateOrderOpen, update)
+        break
       }
 
       case 'COMPLETE': {
         this.eventEmitter.emit(
           LiveService.Events.OrderUpdateOrderComplete,
           update,
-        );
-        break;
+        )
+        break
       }
 
       case 'CANCELLED': {
         this.eventEmitter.emit(
           LiveService.Events.OrderUpdateOrderCancelled,
           update,
-        );
-        break;
+        )
+        break
       }
 
       case 'REJECTED': {
         this.eventEmitter.emit(
           LiveService.Events.OrderUpdateOrderRejected,
           update,
-        );
-        break;
+        )
+        break
       }
 
       case 'UPDATE': {
         this.eventEmitter.emit(
           LiveService.Events.OrderUpdateOrderComplete,
           update,
-        );
-        break;
+        )
+        break
       }
 
       default: {
-        this.logger.warn('Unhandled order update:', update);
+        this.logger.warn('Unhandled order update:', update)
       }
     }
-  };
+  }
 
   public subscribe = (tokens: (EquityToken | DerivativeToken)[]) => {
     for (const token of tokens) {
       if (this.subscribedTokens.has(token)) {
-        continue;
+        continue
       }
 
-      this.subscribedTokens.add(token);
-      this.apiService.subscribeTicker([token]);
-      this.logger.log(`Subscribed to: ${token}`);
+      this.subscribedTokens.add(token)
+      this.apiService.subscribeTicker([token])
+      this.logger.log(`Subscribed to: ${token}`)
     }
-  };
+  }
 
   public unSubscribe = (tokens: (EquityToken | DerivativeToken)[]) => {
     for (const token of tokens) {
       if (this.subscribedTokens.has(token)) {
-        this.subscribedTokens.delete(token);
-        this.apiService.unsubscribeTicker([token]);
-        this.logger.log(`Snsunscribed from: ${token}`);
+        this.subscribedTokens.delete(token)
+        this.apiService.unsubscribeTicker([token])
+        this.logger.log(`Snsunscribed from: ${token}`)
       }
     }
-  };
+  }
 
   private handleTick = (ticks: Tick[]) => {
-    this.eventEmitter.emit(LiveService.Events.Ticks, ticks);
-  };
+    this.eventEmitter.emit(LiveService.Events.Ticks, ticks)
+  }
 
   // websocket stuff
   private wsConnected = () => {
-    this.logger.log(`Websocket connected`);
-  };
+    this.logger.log(`Websocket connected`)
+  }
 
   private wsDisconnected = (error: any) => {
-    this.logger.error(`Websocket connected`, error);
-  };
+    this.logger.error(`Websocket connected`, error)
+  }
 
   private wsClosedWithError = (error: any) => {
-    this.logger.error(`Websocket closed`, error);
-  };
+    this.logger.error(`Websocket closed`, error)
+  }
 
   private wsClosed = () => {
-    this.logger.log(`Websocket closed`);
-  };
+    this.logger.log(`Websocket closed`)
+  }
 
   private wsReconnecting = () => {
-    this.logger.log(`Websocket reconnecting...`);
-  };
+    this.logger.log(`Websocket reconnecting...`)
+  }
 
   private wsExhaustedReconnectionAttempts = () => {
-    this.logger.log(`Websocket reconnection attempts exhausted`);
-  };
+    this.logger.log(`Websocket reconnection attempts exhausted`)
+  }
 
   public isConnected = () => {
-    return this.apiService.isConnected();
-  };
+    return this.apiService.isConnected()
+  }
 
   private connect() {
-    this.apiService.connectTicker();
+    this.apiService.connectTicker()
   }
 }

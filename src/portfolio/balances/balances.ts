@@ -1,8 +1,8 @@
 type Balance = {
-  openingBalance: number;
-  cash: number;
-  adhocMargin: number;
-  liveBalance: number;
-};
+  openingBalance: number
+  cash: number
+  adhocMargin: number
+  liveBalance: number
+}
 
-export { type Balance };
+export { type Balance }

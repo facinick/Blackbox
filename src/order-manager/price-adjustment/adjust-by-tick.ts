@@ -1,9 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { DataService } from 'src/data/data.service';
-import {
-  PriceAdjustmentStrategy,
-  OrderRequest,
-} from '../order-manager.service';
+import { Injectable } from '@nestjs/common'
+import { DataService } from 'src/data/data.service'
+import { PriceAdjustmentStrategy, OrderRequest } from '../order-manager.service'
 
 @Injectable()
 class AdjustByTick implements PriceAdjustmentStrategy {
@@ -13,15 +10,15 @@ class AdjustByTick implements PriceAdjustmentStrategy {
   ): Promise<number> {
     const tickSize = DataService.getTickSizeForTradingsymbol(
       orderRequest.tradingsymbol,
-    );
+    )
 
     const nextPrice =
       orderRequest.buyOrSell === 'BUY'
         ? lastPrice + tickSize
-        : lastPrice - tickSize;
+        : lastPrice - tickSize
 
-    return nextPrice;
+    return nextPrice
   }
 }
 
-export { AdjustByTick };
+export { AdjustByTick }

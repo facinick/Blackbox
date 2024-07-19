@@ -25,15 +25,15 @@ type KiteTicker = {
   /**
    * Set mode full
    */
-  modeFull: 'full';
+  modeFull: "full";
   /**
    * this.modeLTP
    */
-  modeLTP: 'ltp';
+  modeLTP: "ltp";
   /**
    * this.modeQuote
    */
-  modeQuote: 'quote';
+  modeQuote: "quote";
 
   /**
    * Auto reconnect settings
@@ -81,14 +81,14 @@ type KiteTicker = {
    */
   on: (
     event:
-      | 'connect'
-      | 'ticks'
-      | 'disconnect'
-      | 'error'
-      | 'close'
-      | 'reconnect'
-      | 'noreconnect'
-      | 'order_update',
+      | "connect"
+      | "ticks"
+      | "disconnect"
+      | "error"
+      | "close"
+      | "reconnect"
+      | "noreconnect"
+      | "order_update",
     callback: Function,
   ) => void;
   /**
@@ -99,7 +99,7 @@ type KiteTicker = {
    * @example
    * ticker.setMode(ticker.modeFull, [738561]);
    */
-  setMode: (mode: 'ltp' | 'quote' | 'full', tokens: number[]) => number[];
+  setMode: (mode: "ltp" | "quote" | "full", tokens: number[]) => number[];
   /**
    * Subscribe to array of tokens
    * @param tokens Array of tokens to be subscribed

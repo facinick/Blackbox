@@ -9,7 +9,7 @@ TypeError: this.triggerDisconnect is not a function
     at processTimers (node:internal/timers:512:7)
 
     
-[] order handler has logger not defined, even "this" is not defined
+[x] order handler has logger not defined, even "this" is not defined
 
 PRODUCT_MIS: MIS
 PRODUCT_CNC: CNC

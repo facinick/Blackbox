@@ -1,44 +1,44 @@
 type Exchanges =
-  | KiteConnect['EXCHANGE_NSE']
-  | KiteConnect['EXCHANGE_BSE']
-  | KiteConnect['EXCHANGE_NFO']
-  | KiteConnect['EXCHANGE_CDS']
-  | KiteConnect['EXCHANGE_BCD']
-  | KiteConnect['EXCHANGE_BFO']
-  | KiteConnect['EXCHANGE_MCX'];
+  | KiteConnect["EXCHANGE_NSE"]
+  | KiteConnect["EXCHANGE_BSE"]
+  | KiteConnect["EXCHANGE_NFO"]
+  | KiteConnect["EXCHANGE_CDS"]
+  | KiteConnect["EXCHANGE_BCD"]
+  | KiteConnect["EXCHANGE_BFO"]
+  | KiteConnect["EXCHANGE_MCX"];
 
 type TransactionType =
-  | KiteConnect['TRANSACTION_TYPE_BUY']
-  | KiteConnect['TRANSACTION_TYPE_SELL'];
+  | KiteConnect["TRANSACTION_TYPE_BUY"]
+  | KiteConnect["TRANSACTION_TYPE_SELL"];
 
 type PositionTypes =
-  | KiteConnect['POSITION_TYPE_DAY']
-  | KiteConnect['POSITION_TYPE_OVERNIGHT'];
+  | KiteConnect["POSITION_TYPE_DAY"]
+  | KiteConnect["POSITION_TYPE_OVERNIGHT"];
 
 type Product =
-  | KiteConnect['PRODUCT_NRML']
-  | KiteConnect['PRODUCT_MIS']
-  | KiteConnect['PRODUCT_CNC'];
+  | KiteConnect["PRODUCT_NRML"]
+  | KiteConnect["PRODUCT_MIS"]
+  | KiteConnect["PRODUCT_CNC"];
 
 type OrderType =
-  | KiteConnect['ORDER_TYPE_LIMIT']
-  | KiteConnect['ORDER_TYPE_MARKET']
-  | KiteConnect['ORDER_TYPE_SL']
-  | KiteConnect['ORDER_TYPE_SLM'];
+  | KiteConnect["ORDER_TYPE_LIMIT"]
+  | KiteConnect["ORDER_TYPE_MARKET"]
+  | KiteConnect["ORDER_TYPE_SL"]
+  | KiteConnect["ORDER_TYPE_SLM"];
 
 type Variety =
-  | KiteConnect['VARIETY_AMO']
-  | KiteConnect['VARIETY_AUCTION']
-  | KiteConnect['VARIETY_CO']
-  | KiteConnect['VARIETY_ICEBERG']
-  | KiteConnect['VARIETY_REGULAR'];
+  | KiteConnect["VARIETY_AMO"]
+  | KiteConnect["VARIETY_AUCTION"]
+  | KiteConnect["VARIETY_CO"]
+  | KiteConnect["VARIETY_ICEBERG"]
+  | KiteConnect["VARIETY_REGULAR"];
 
 type Validity =
-  | KiteConnect['VALIDITY_DAY']
-  | KiteConnect['VALIDITY_IOC']
-  | KiteConnect['VALIDITY_TTL'];
+  | KiteConnect["VALIDITY_DAY"]
+  | KiteConnect["VALIDITY_IOC"]
+  | KiteConnect["VALIDITY_TTL"];
 
-type TriggerType = KiteConnect['GTT_TYPE_OCO'] | KiteConnect['GTT_TYPE_SINGLE'];
+type TriggerType = KiteConnect["GTT_TYPE_OCO"] | KiteConnect["GTT_TYPE_SINGLE"];
 
 type SessionData = {
   /**
@@ -124,13 +124,13 @@ type Trigger = {
   updated_at: string;
   expires_at: string;
   status:
-    | 'active'
-    | 'triggered'
-    | 'disabled'
-    | 'expired'
-    | 'cancelled'
-    | 'rejected'
-    | 'deleted';
+    | "active"
+    | "triggered"
+    | "disabled"
+    | "expired"
+    | "cancelled"
+    | "rejected"
+    | "deleted";
   condition: {
     exchange: string;
     last_price: number;
@@ -297,7 +297,7 @@ type Instrument = {
   /**
    * EQ, FUT, CE, PE
    */
-  instrument_type: 'EQ' | 'FUT' | 'CE' | 'PE';
+  instrument_type: "EQ" | "FUT" | "CE" | "PE";
   /**
    * Segment the instrument belongs to
    */
@@ -1323,66 +1323,66 @@ type KiteConnect = {
   // Constants
 
   // Products
-  PRODUCT_MIS: 'MIS';
-  PRODUCT_CNC: 'CNC';
-  PRODUCT_NRML: 'NRML';
+  PRODUCT_MIS: "MIS";
+  PRODUCT_CNC: "CNC";
+  PRODUCT_NRML: "NRML";
 
   // Order types
-  ORDER_TYPE_MARKET: 'MARKET';
-  ORDER_TYPE_LIMIT: 'LIMIT';
-  ORDER_TYPE_SLM: 'SL-M';
-  ORDER_TYPE_SL: 'SL';
+  ORDER_TYPE_MARKET: "MARKET";
+  ORDER_TYPE_LIMIT: "LIMIT";
+  ORDER_TYPE_SLM: "SL-M";
+  ORDER_TYPE_SL: "SL";
 
   // Varieties
-  VARIETY_REGULAR: 'regular';
-  VARIETY_CO: 'co';
-  VARIETY_AMO: 'amo';
-  VARIETY_ICEBERG: 'iceberg';
-  VARIETY_AUCTION: 'auction';
+  VARIETY_REGULAR: "regular";
+  VARIETY_CO: "co";
+  VARIETY_AMO: "amo";
+  VARIETY_ICEBERG: "iceberg";
+  VARIETY_AUCTION: "auction";
 
   // Transaction types
-  TRANSACTION_TYPE_BUY: 'BUY';
-  TRANSACTION_TYPE_SELL: 'SELL';
+  TRANSACTION_TYPE_BUY: "BUY";
+  TRANSACTION_TYPE_SELL: "SELL";
 
   // Validities
-  VALIDITY_DAY: 'DAY';
-  VALIDITY_IOC: 'IOC';
-  VALIDITY_TTL: 'TTL';
+  VALIDITY_DAY: "DAY";
+  VALIDITY_IOC: "IOC";
+  VALIDITY_TTL: "TTL";
 
   // Exchanges
-  EXCHANGE_NSE: 'NSE';
-  EXCHANGE_BSE: 'BSE';
-  EXCHANGE_NFO: 'NFO';
-  EXCHANGE_CDS: 'CDS';
-  EXCHANGE_BCD: 'BCD';
-  EXCHANGE_BFO: 'BFO';
-  EXCHANGE_MCX: 'MCX';
+  EXCHANGE_NSE: "NSE";
+  EXCHANGE_BSE: "BSE";
+  EXCHANGE_NFO: "NFO";
+  EXCHANGE_CDS: "CDS";
+  EXCHANGE_BCD: "BCD";
+  EXCHANGE_BFO: "BFO";
+  EXCHANGE_MCX: "MCX";
 
   // Margins segments
-  MARGIN_EQUITY: 'equity';
-  MARGIN_COMMODITY: 'commodity';
+  MARGIN_EQUITY: "equity";
+  MARGIN_COMMODITY: "commodity";
 
   // Statuses
-  STATUS_CANCELLED: 'CANCELLED';
-  STATUS_REJECTED: 'REJECTED';
-  STATUS_COMPLETE: 'COMPLETE';
+  STATUS_CANCELLED: "CANCELLED";
+  STATUS_REJECTED: "REJECTED";
+  STATUS_COMPLETE: "COMPLETE";
 
   // GTT types
-  GTT_TYPE_OCO: 'two-leg';
-  GTT_TYPE_SINGLE: 'single';
+  GTT_TYPE_OCO: "two-leg";
+  GTT_TYPE_SINGLE: "single";
 
   // GTT statuses
-  GTT_STATUS_ACTIVE: 'active';
-  GTT_STATUS_TRIGGERED: 'triggered';
-  GTT_STATUS_DISABLED: 'disabled';
-  GTT_STATUS_EXPIRED: 'expired';
-  GTT_STATUS_CANCELLED: 'cancelled';
-  GTT_STATUS_REJECTED: 'rejected';
-  GTT_STATUS_DELETED: 'deleted';
+  GTT_STATUS_ACTIVE: "active";
+  GTT_STATUS_TRIGGERED: "triggered";
+  GTT_STATUS_DISABLED: "disabled";
+  GTT_STATUS_EXPIRED: "expired";
+  GTT_STATUS_CANCELLED: "cancelled";
+  GTT_STATUS_REJECTED: "rejected";
+  GTT_STATUS_DELETED: "deleted";
 
   // Position types
-  POSITION_TYPE_DAY: 'day';
-  POSITION_TYPE_OVERNIGHT: 'overnight';
+  POSITION_TYPE_DAY: "day";
+  POSITION_TYPE_OVERNIGHT: "overnight";
 
   // Members
 
@@ -1405,7 +1405,7 @@ type KiteConnect = {
    * @param params Order params. regular).
    */
   cancelOrder: (
-    variety: 'regular' | 'bo' | 'co' | 'amo' | 'iceberg' | 'auction',
+    variety: "regular" | "bo" | "co" | "amo" | "iceberg" | "auction",
     order_id: number | string,
     params?: {
       /**
@@ -1463,7 +1463,7 @@ type KiteConnect = {
    * @param params Order params.
    */
   exitOrder: (
-    variety: 'regular' | 'bo' | 'co' | 'amo' | 'iceberg' | 'auction',
+    variety: "regular" | "bo" | "co" | "amo" | "iceberg" | "auction",
     order_id: string,
     params?: {
       /**
@@ -1523,14 +1523,14 @@ type KiteConnect = {
   getHistoricalData: (
     instrument_token: number | string,
     interval:
-      | 'minute'
-      | 'day'
-      | '3minute'
-      | '5minute'
-      | '10minute'
-      | '15minute'
-      | '30minute'
-      | '60minute',
+      | "minute"
+      | "day"
+      | "3minute"
+      | "5minute"
+      | "10minute"
+      | "15minute"
+      | "30minute"
+      | "60minute",
     from_date: string | Date,
     to_date: string | Date,
     continuous?: boolean,
@@ -1605,7 +1605,7 @@ type KiteConnect = {
    * Get account balance and cash margin details for a particular segment.
    * @param segment trading segment (eg: equity or commodity).
    */
-  getMargins: (segment?: 'equity' | 'commodity') => Promise<{
+  getMargins: (segment?: "equity" | "commodity") => Promise<{
     equity?: UserMargin;
     commodity?: UserMargin;
   }>;
@@ -1934,7 +1934,7 @@ type KiteConnect = {
       /**
        * Order frequency. weekly, monthly, or quarterly.
        */
-      frequency?: 'weekly' | 'monthly' | 'quarterly';
+      frequency?: "weekly" | "monthly" | "quarterly";
       /**
        * If frequency is monthly, the day of the month (1, 5, 10, 15, 20, 25) to trigger the order on.
        */
@@ -1942,7 +1942,7 @@ type KiteConnect = {
       /**
        * Pause or unpause an SIP (active or paused).
        */
-      status?: 'active' | 'paused';
+      status?: "active" | "paused";
     },
   ) => Promise<{ sip_id: number }>;
 
@@ -2074,7 +2074,7 @@ type KiteConnect = {
     /**
      * Order frequency. weekly, monthly, or quarterly.
      */
-    frequency: 'weekly' | 'monthly' | 'quarterly';
+    frequency: "weekly" | "monthly" | "quarterly";
     /**
      * Amount worth of units to purchase before the SIP starts.
      */

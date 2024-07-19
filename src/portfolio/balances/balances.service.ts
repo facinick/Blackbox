@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { ApiService } from 'src/api/api.service';
-import { Balance } from './balances';
-import { AppLogger } from 'src/logger/logger.service';
+import { Inject, Injectable } from '@nestjs/common'
+import { API_SERVICE, ApiService } from 'src/api/api.service'
+import { Balance } from './balances'
+import { AppLogger } from 'src/logger/logger.service'
 
 // type ZMargin = {
 //   equity: {
@@ -60,26 +60,27 @@ import { AppLogger } from 'src/logger/logger.service';
 
 @Injectable()
 export class BalancesService {
-  private balance: Balance;
+  private balance: Balance
 
   constructor(
+    @Inject(API_SERVICE)
     private readonly apiService: ApiService,
     private readonly logger: AppLogger,
   ) {
-    this.logger.setContext(this.constructor.name);
+    this.logger.setContext(this.constructor.name)
   }
 
   initialize = async () => {
-    this.logger.log(`inintializing balances service`);
-    await this.syncBalances();
-  };
+    this.logger.log(`inintializing balances service`)
+    await this.syncBalances()
+  }
 
   syncBalances = async () => {
-    this.balance = await this.apiService.getBalance();
-    this.logger.log(`balance updated:`, this.balance);
-  };
+    this.balance = await this.apiService.getBalance()
+    this.logger.log(`balance updated:`, this.balance)
+  }
 
   getBalances = () => {
-    return this.balance;
-  };
+    return this.balance
+  }
 }

@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { LedgersService } from './ledger.service';
-import { PrismaModule } from 'src/prisma/prisma.module';
-import { LedgerLocalStore } from './storage/local/ledger.local.store';
-import { LEDGER_STORE_PORT } from './ledger.store.port';
+import { Module } from '@nestjs/common'
+import { LedgersService } from './ledger.service'
+import { PrismaModule } from 'src/prisma/prisma.module'
+import { LedgerLocalStore } from './storage/local/ledger.local.store'
+import { LEDGER_STORE_PORT } from './ledger.store.port'
 
 @Module({
   imports: [PrismaModule],
