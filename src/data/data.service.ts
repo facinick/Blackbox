@@ -342,7 +342,9 @@ export class DataService {
 
         const secondCall = DataService.getDerivativeInfoFromToken(calls[1])
 
-        stepSize = secondCall.strike - firstCall.strike
+        // todo: verify if this is always correct. the calls are not sorted as per increasing strike
+        // so we can ensure we always get correct step size by abs(a-b)?
+        stepSize = Math.abs(secondCall.strike - firstCall.strike)
 
         DataService.equitiesTradingSymbolReferenceStepSizeMap.set(key, stepSize)
       } else {
@@ -394,13 +396,13 @@ export class DataService {
     const dateString = `${today.toLocaleString('default', { month: 'short' }).toLowerCase()}${today.getDate()}`
 
     DataService.RAW_DERIVATIVES_FILENAME = path.join(
-      __dirname,
-      '..',
+      process.cwd(),
+      'instruments',
       `${dateString}_raw_derivatives.json`,
     )
     DataService.RAW_EQUITIES_FILENAME = path.join(
-      __dirname,
-      '..',
+      process.cwd(),
+      'instruments',
       `${dateString}_raw_equities.json`,
     )
     console.debug(
