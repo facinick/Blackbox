@@ -1,18 +1,10 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  Redirect,
-  Req,
-} from '@nestjs/common'
-import { AppService } from './app.service'
-import { TokenService } from './token.service'
+import { Controller, Get, Query, Redirect, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { AppLogger } from './logger/logger.service'
 import { KiteConnect } from 'kiteconnect'
+import { AppService } from './app.service'
+import { AppLogger } from './logger/logger.service'
+import { TokenService } from './token.service'
+import { Response } from 'express'
 
 @Controller()
 export class AppController {
@@ -35,8 +27,7 @@ export class AppController {
   }
 
   @Get()
-  @Redirect()
-  async init() {
+  async init(@Res() res: Response) {
     try {
       const userId = this.configService.get('ZERODHA_USER_ID')
       const accessToken = await this.tokenService.getAccessToken(userId)
@@ -44,9 +35,7 @@ export class AppController {
       if (!accessToken) {
         this.logger.log(`No access token found, redirecting to zerodha`)
         const loginUrl = this.kc.getLoginURL()
-        return {
-          url: loginUrl,
-        }
+        return res.redirect(loginUrl)
       }
       const apiKey = this.configService.get('ZERODHA_API_KEY')
       if (!apiKey) {
@@ -54,26 +43,25 @@ export class AppController {
       }
       await this.appService.initialize(accessToken, apiKey)
       this.logger.log('App is initialized')
+      return res.send('App is initialized and running')
     } catch (error) {
       this.logger.error(
         'Error logging in with existing access token, redirecting to zerodha',
         error,
       )
       const loginUrl = this.kc.getLoginURL()
-      return {
-        url: loginUrl,
-      }
+      return res.redirect(loginUrl)
     }
   }
 
   @Get('callback/zerodha')
   @Redirect()
   async callback(@Query('request_token') requestToken: string) {
-    const apiKey = this.configService.get('ZERODHA_API_KEY')
-    if (!apiKey) {
-      throw new Error(`No API Key found to generate zerodha session`)
+    const apiSecret = this.configService.get('ZERODHA_API_SECRET')
+    if (!apiSecret) {
+      throw new Error(`No API Secret found to generate zerodha session`)
     }
-    const session = await this.kc.generateSession(requestToken, apiKey)
+    const session = await this.kc.generateSession(requestToken, apiSecret)
     this.logger.log(`New session generated:`, session)
     const userId = this.configService.get('ZERODHA_USER_ID')
     if (!userId) {
