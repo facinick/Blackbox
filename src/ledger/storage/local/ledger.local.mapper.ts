@@ -7,26 +7,18 @@ export const LedgerMpper = {
     return {
       id: trade.id,
       tradingsymbol: trade.tradingsymbol as Tradingsymbol,
-      token: trade.token,
       averagePrice: trade.averagePrice,
       quantity: trade.quantity,
-      instrumentType: trade.instrumentType as InstrumentType,
-      segment: trade.segment as Segment,
-      exchange: trade.exchange as Exchange,
       buyOrSell: trade.buyOrSell as BuyOrSell,
       tag: trade.tag,
     }
   },
-  toPersistence(trade: Trade): PrismaTrade {
+  toPersistence(trade: Trade): Omit<PrismaTrade, 'createdAt' | 'updatedAt'> {
     return {
       id: trade.id,
       tradingsymbol: trade.tradingsymbol as Tradingsymbol,
-      token: trade.token,
       averagePrice: trade.averagePrice,
       quantity: trade.quantity,
-      instrumentType: trade.instrumentType as InstrumentType,
-      segment: trade.segment as Segment,
-      exchange: trade.exchange as Exchange,
       buyOrSell: trade.buyOrSell as BuyOrSell,
       tag: trade.tag,
     }

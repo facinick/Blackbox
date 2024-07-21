@@ -12,6 +12,7 @@ export class LiveService {
     OrderUpdateOrderRejected: 'live.order.rejected',
     OrderUpdateOrderComplete: 'live.order.complete',
     OrderUpdateOrderModifiedOrPartialComplete: 'live.order.modifiedOrPartial',
+    OrderUpdateOrderUnknown: 'live.order.unknown',
     Ticks: 'live.ticks',
   }
 
@@ -29,18 +30,18 @@ export class LiveService {
   initialize = async () => {
     return new Promise((resolve, reject) => {
       this.logger.log(`Setting up live data listeners`)
-      this.apiService.registerForPriceUpdates((ticks) => this.handleTick(ticks))
+      this.apiService.registerForPriceUpdates(this.handleTick.bind(this))
       this.apiService.registerForOrderUpdates(this.handleOrderUpdate.bind(this))
       this.apiService.registerForConnect(() => {
         this.wsConnected()
         resolve({})
       })
-      this.apiService.registerForDisconnect(this.wsDisconnected)
-      this.apiService.registerForError(this.wsClosedWithError)
-      this.apiService.registerForClose(this.wsClosed)
-      this.apiService.registerForReconnect(this.wsReconnecting)
+      this.apiService.registerForDisconnect(this.wsDisconnected.bind(this))
+      this.apiService.registerForError(this.wsClosedWithError.bind(this))
+      this.apiService.registerForClose(this.wsClosed.bind(this))
+      this.apiService.registerForReconnect(this.wsReconnecting.bind(this))
       this.apiService.registerForNoreconnect(
-        this.wsExhaustedReconnectionAttempts,
+        this.wsExhaustedReconnectionAttempts.bind(this),
       )
       this.logger.log(`Connecting ticker...`)
       this.connect()
@@ -88,6 +89,10 @@ export class LiveService {
 
       default: {
         this.logger.warn('Unhandled order update:', update)
+        this.eventEmitter.emit(
+          LiveService.Events.OrderUpdateOrderUnknown,
+          update,
+        )
       }
     }
   }
@@ -109,7 +114,7 @@ export class LiveService {
       if (this.subscribedTokens.has(token)) {
         this.subscribedTokens.delete(token)
         this.apiService.unsubscribeTicker([token])
-        this.logger.log(`Snsunscribed from: ${token}`)
+        this.logger.log(`Unsubscribed from: ${token}`)
       }
     }
   }
@@ -124,7 +129,7 @@ export class LiveService {
   }
 
   private wsDisconnected = (error: any) => {
-    this.logger.error(`Websocket connected`, error)
+    this.logger.error(`Websocket disconnected`, error)
   }
 
   private wsClosedWithError = (error: any) => {

@@ -85,6 +85,10 @@ async function sleep(durationMs: number) {
   return new Promise((resolve) => setTimeout(resolve, durationMs))
 }
 
+function doNothing() {
+  return
+}
+
 export {
   containsNumber,
   capitalizeFirstLetter,
@@ -94,4 +98,5 @@ export {
   clamp,
   throttle,
   Throttle,
+  doNothing,
 }

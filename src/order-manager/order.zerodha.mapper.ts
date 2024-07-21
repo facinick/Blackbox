@@ -1,38 +1,107 @@
 import { KiteConnect } from 'kiteconnect'
-import { Order } from './order'
+import { Order, OrderHistory, Trade } from './order'
 
 export const OrdersMapper = {
-  toDomain: (
-    zOrder: Awaited<ReturnType<KiteConnect['getOrders']>>[number],
-  ): Order => {
-    const brokerOrderId = zOrder.order_id
+  Orders: {
+    toDomain: (
+      zOrder: Awaited<ReturnType<KiteConnect['getOrders']>>[number],
+    ): Order => {
+      const brokerOrderId = zOrder.order_id
 
-    const tradingsymbol = zOrder.tradingsymbol
+      const tradingsymbol = zOrder.tradingsymbol
 
-    const token = zOrder.instrument_token
+      const token = zOrder.instrument_token
 
-    const quantity = zOrder.quantity
+      const quantity = zOrder.quantity
 
-    const price = zOrder.price
+      const price = zOrder.price
 
-    const averagePrice = zOrder.average_price
+      const averagePrice = zOrder.average_price
 
-    const buyOrSell = zOrder.transaction_type as BuyOrSell
+      const buyOrSell = zOrder.transaction_type as BuyOrSell
 
-    const exchange = zOrder.exchange as Exchange
+      const exchange = zOrder.exchange as Exchange
 
-    const tag = zOrder.tag
+      const tag = zOrder.tag
 
-    return {
-      brokerOrderId,
-      tradingsymbol,
-      token,
-      quantity,
-      price,
-      averagePrice,
-      buyOrSell,
-      exchange,
-      tag,
-    }
+      return {
+        brokerOrderId,
+        tradingsymbol,
+        token,
+        quantity,
+        price,
+        averagePrice,
+        buyOrSell,
+        exchange,
+        tag,
+      }
+    },
+  },
+  OrderHistory: {
+    toDomain: (
+      zOrder: Awaited<ReturnType<KiteConnect['getOrderHistory']>>[number],
+    ): OrderHistory => {
+      const brokerOrderId = zOrder.order_id
+
+      const tradingsymbol = zOrder.tradingsymbol
+
+      const token = zOrder.instrument_token
+
+      const quantity = zOrder.quantity
+
+      const pendingQuantity = zOrder.pending_quantity
+
+      const status = zOrder.status
+
+      const filledQuantity = zOrder.filled_quantity
+
+      const cancelledQuantity = zOrder.cancelled_quantity
+
+      const price = zOrder.price
+
+      const averagePrice = zOrder.average_price
+
+      const buyOrSell = zOrder.transaction_type as BuyOrSell
+
+      const exchange = zOrder.exchange as Exchange
+
+      const tag = zOrder.tag
+
+      return {
+        brokerOrderId,
+        tradingsymbol,
+        token,
+        quantity,
+        pendingQuantity,
+        status,
+        filledQuantity,
+        cancelledQuantity,
+        price,
+        averagePrice,
+        buyOrSell,
+        exchange,
+        tag,
+      }
+    },
+  },
+  Trade: {
+    toDomain: (
+      zTrade: Awaited<ReturnType<KiteConnect['getOrderTrades']>>[number],
+    ): Trade => {
+      const brokerOrderId = zTrade.order_id
+
+      const brokerTradeId = zTrade.trade_id
+
+      const averagePrice = zTrade.average_price
+
+      const quantity = zTrade.filled
+
+      return {
+        brokerOrderId,
+        brokerTradeId,
+        averagePrice,
+        quantity,
+      }
+    },
   },
 }

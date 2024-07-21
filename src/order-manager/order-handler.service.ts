@@ -1,45 +1,58 @@
-import { Injectable, Inject } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter'
 import { API_SERVICE, ApiService } from 'src/api/api.service'
 import { DataService } from 'src/data/data.service'
+import { OrderUpdate } from 'src/live/live'
 import { LiveService } from 'src/live/live.service'
+import { AppLogger } from 'src/logger/logger.service'
+import { clamp, doNothing, withRetry } from 'src/utils'
+import { Trade } from './order'
 import { OrderRequest, PriceAdjustmentStrategy } from './order-manager.service'
 import { PRICE_ADJUSTMENT_STRATEGY } from './price-adjustment/price-adjustment.strategy'
-import { withRetry, clamp } from 'src/utils'
-import { AppLogger } from 'src/logger/logger.service'
-import { OrderUpdate } from 'src/live/live'
 
 /*
 emits:
-order-handler.initial
-order-handler.unknown (brokerOrderId, orderRequest)
-order-handler.done (brokerOrderId, orderRequest)
+// order was never placed, so no brokerId
+order-handler.failed (brokerOrderId, orderRequest)
+// order was palceed, and somehow handled
+order-handler.handled (brokerOrderId, orderRequest)
+// order was palced, not handled so must be manually handled
+order-handler.not-handled (brokerOrderId, orderRequest)
 */
+
+export type OrderHandlerEventData = {
+  brokerOrderId: string | null
+  orderRequest: OrderRequest
+  averagePrice: number
+  filledQuantity: number
+}
 
 @Injectable()
 class OrderHandler {
-  public static Events = {
-    OrderHandlerInitial: 'order-handler.initial',
-    OrderHandlerUnknown: 'order-handler.unknown',
-    OrderHandlerDone: 'order-handler.done',
+  public static readonly Events = {
+    OrderHandlerFailed: 'order-handler.failed',
+    OrderHandlerHandled: 'order-handler.handled',
+    OrderHandlerNotHandled: 'order-handler.not-handled',
   }
 
   // placed orders will have this not undefined
   private brokerOrderId: string
   // retry with price adjustments
-  private MAX_PRICE_ADJUSTMENT_ATTEMPTS: number = 3
-  private MAX_PRICE_ADJUSTMENT_TICK_MULTIPLE: number = 5
+  private readonly MAX_PRICE_ADJUSTMENT_ATTEMPTS: number = 3
+  private readonly MAX_PRICE_ADJUSTMENT_TICK_MULTIPLE: number = 5
   private lastPrice: number
   private priceAdjustments: number = 0
   private lastPriceAdjustmentTimestamp: number
   // regularly handle this order
   private timer: NodeJS.Timeout
-  private RETRY_INTERVAL_MS: number = 15_000
+  private readonly RETRY_INTERVAL_MS: number = 15_000
 
-  private status:
-    | 'initial' //
-    | 'unknown' // placed and failed during modification / cancellation therefore requires manual intervention. Their current status is unknown.
-    | 'done' = 'initial'
+  // quantity = pendingQuantity + cancelledQuantity + filledQuantity + rejectedQuantity
+  private readonly quantity: number
+
+  private filledQuantity: number = 0
+  private cancelledQuantity: number = 0
+  private rejectedQuantity: number = 0
 
   constructor(
     private readonly orderRequest: OrderRequest,
@@ -51,6 +64,7 @@ class OrderHandler {
     private readonly logger: AppLogger,
   ) {
     this.lastPrice = orderRequest.price
+    this.quantity = orderRequest.quantity
     this.logger.setContext(
       `${this.constructor.name} ${(Math.random() * 1000).toFixed(0)}`,
     )
@@ -58,14 +72,17 @@ class OrderHandler {
 
   public execute = async () => {
     this.logger.log(`executing order`)
-    this.eventEmitter.emit(`order-handler.${this.status}`)
     try {
       this.start()
-      this.brokerOrderId = (await withRetry<Awaited<ReturnType<OrderHandler['placeOrder']>>>(this.placeOrder.bind(this))).brokerOrderId
+      this.brokerOrderId = (
+        await withRetry<Awaited<ReturnType<OrderHandler['placeOrder']>>>(
+          this.placeOrder.bind(this),
+        )
+      ).brokerOrderId
     } catch (error) {
-      console.error(`failed`, error)
-      this.status = 'done'
+      this.logger.error(`failed`, error)
       this.stop()
+      this.emitFailed()
     }
   }
 
@@ -77,35 +94,40 @@ class OrderHandler {
   private stop = () => {
     this.logger.log(`stopping order handler timer`)
     clearTimeout(this.timer)
-    this.eventEmitter.emit(`order-handler.${this.status}`)
   }
 
   private manageOrder = async () => {
-    this.logger.log(`${this.RETRY_INTERVAL_MS} ms passed since placing order, order not completed yet, managing.`)
+    this.logger.log(
+      `${this.RETRY_INTERVAL_MS} ms passed since placing order, order not completed yet, managing.`,
+    )
     clearTimeout(this.timer)
 
     // MODIFY ORDER PRICE
     if (this.priceAdjustments < this.MAX_PRICE_ADJUSTMENT_ATTEMPTS) {
       try {
-        this.lastPrice = await withRetry<Awaited<ReturnType<OrderHandler['modifyOrder']>>>(this.modifyOrder.bind(this))
+        this.lastPrice = await withRetry<
+          Awaited<ReturnType<OrderHandler['modifyOrder']>>
+        >(this.modifyOrder.bind(this))
         this.priceAdjustments++
         this.lastPriceAdjustmentTimestamp = Date.now()
         this.timer = setTimeout(this.manageOrder, this.RETRY_INTERVAL_MS)
       } catch (error) {
-        this.status = 'unknown'
         this.stop()
+        this.emitNotHandled()
       }
     }
 
     // CANCEL ORDER
     else {
       try {
-        await withRetry<Awaited<ReturnType<OrderHandler['cancelOrder']>>>(this.cancelOrder.bind(this))
-        this.status = 'done'
+        await withRetry<Awaited<ReturnType<OrderHandler['cancelOrder']>>>(
+          this.cancelOrder.bind(this),
+        )
         this.stop()
+        this.emitHandled()
       } catch (error) {
-        this.status = 'unknown'
         this.stop()
+        this.emitNotHandled()
       }
     }
   }
@@ -155,8 +177,10 @@ class OrderHandler {
       return
     }
 
-    this.status = 'done'
+    this.filledQuantity = update.filledQuantity
+
     this.stop()
+    this.emitHandled()
   }
 
   @OnEvent(LiveService.Events.OrderUpdateOrderRejected)
@@ -165,8 +189,11 @@ class OrderHandler {
       return
     }
 
-    this.status = 'done'
+    this.rejectedQuantity =
+      this.quantity - this.filledQuantity - this.cancelledQuantity
+
     this.stop()
+    this.emitHandled()
   }
 
   @OnEvent(LiveService.Events.OrderUpdateOrderCancelled)
@@ -175,8 +202,28 @@ class OrderHandler {
       return
     }
 
-    this.status = 'done'
+    this.cancelledQuantity = update.cancelledQuantity
+
     this.stop()
+    this.emitHandled()
+  }
+
+  @OnEvent(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete)
+  onOrderModifiedOrPartialCompleteEvent(update: OrderUpdate) {
+    if (!(update.brokerOrderId === this.brokerOrderId)) {
+      return
+    }
+
+    this.filledQuantity = update.filledQuantity
+  }
+
+  @OnEvent(LiveService.Events.OrderUpdateOrderUnknown)
+  onOrderUnknownEvent(update: OrderUpdate) {
+    if (!(update.brokerOrderId === this.brokerOrderId)) {
+      return
+    }
+
+    doNothing()
   }
 
   @OnEvent(LiveService.Events.OrderUpdateOrderOpen)
@@ -184,13 +231,104 @@ class OrderHandler {
     if (!(update.brokerOrderId === this.brokerOrderId)) {
       return
     }
+
+    doNothing()
   }
 
-  // modified or partial filled
-  @OnEvent(LiveService.Events.OrderUpdateOrderModifiedOrPartialComplete)
-  onOrderUpdateEvent(update: OrderUpdate) {
-    if (!(update.brokerOrderId === this.brokerOrderId)) {
-      return
+  emitFailed = async () => {
+    const eventData = {
+      brokerOrderId: this.brokerOrderId,
+      filledQuantity: 0,
+      averagePrice: 0,
+      orderRequest: this.orderRequest,
+    }
+
+    this.logger.log(`failed to place order:`, eventData)
+
+    this.eventEmitter.emit(OrderHandler.Events.OrderHandlerFailed, eventData)
+  }
+
+  emitHandled = async () => {
+    const trades = await this.apiService.getOrderTrades({
+      brokerOrderId: this.brokerOrderId,
+    })
+
+    const { averagePrice, filledQuantity } =
+      this.calculateAveragePriceAndFilledQuantity(trades)
+
+    const eventData = {
+      brokerOrderId: this.brokerOrderId,
+      filledQuantity,
+      averagePrice,
+      orderRequest: this.orderRequest,
+    }
+
+    this.logger.log(`handled order, status:`, eventData)
+
+    this.eventEmitter.emit(OrderHandler.Events.OrderHandlerHandled, {
+      brokerOrderId: this.brokerOrderId,
+      filledQuantity,
+      averagePrice,
+      orderRequest: this.orderRequest,
+    })
+  }
+
+  emitNotHandled = async () => {
+    const trades = await this.apiService.getOrderTrades({
+      brokerOrderId: this.brokerOrderId,
+    })
+
+    const { averagePrice, filledQuantity } =
+      this.calculateAveragePriceAndFilledQuantity(trades)
+
+    const eventData = {
+      brokerOrderId: this.brokerOrderId,
+      filledQuantity,
+      averagePrice,
+      orderRequest: this.orderRequest,
+    }
+
+    this.logger.log(`couldn't handle order, status:`, eventData)
+
+    this.eventEmitter.emit(
+      OrderHandler.Events.OrderHandlerNotHandled,
+      eventData,
+    )
+  }
+
+  private calculateAveragePriceAndFilledQuantity = (
+    trades: Trade[],
+  ): {
+    averagePrice: number
+    filledQuantity: number
+  } => {
+    if (trades.length === 0) {
+      return {
+        averagePrice: 0,
+        filledQuantity: 0,
+      }
+    }
+
+    if (trades.length === 1) {
+      return {
+        averagePrice: trades[0].averagePrice,
+        filledQuantity: trades[0].quantity,
+      }
+    }
+
+    const { totalQuantity, totalCost } = trades.reduce(
+      (acc, trade) => {
+        acc.totalQuantity += trade.quantity
+        acc.totalCost += trade.quantity * trade.averagePrice
+        return acc
+      },
+      { totalQuantity: 0, totalCost: 0 },
+    )
+
+    const averagePrice = parseFloat((totalCost / totalQuantity).toFixed(2))
+    return {
+      averagePrice,
+      filledQuantity: totalQuantity,
     }
   }
 }

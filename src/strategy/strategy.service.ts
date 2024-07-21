@@ -1,21 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { API_SERVICE, ApiService } from 'src/api/api.service'
-import { DataService } from 'src/data/data.service'
-import { LiveService } from 'src/live/live.service'
-import { PortfolioService } from 'src/portfolio/portfolio.service'
 import { OnEvent } from '@nestjs/event-emitter'
+import { Mutex } from 'async-mutex'
+import { API_SERVICE, ApiService } from 'src/api/api.service'
+import { Equity } from 'src/data/data'
+import { DataService } from 'src/data/data.service'
 import { LedgersService } from 'src/ledger/ledger.service'
-import { DerivativePosition } from 'src/portfolio/positions/positions'
+import { Tick } from 'src/live/live'
+import { LiveService } from 'src/live/live.service'
+import { AppLogger } from 'src/logger/logger.service'
 import {
   ExecuteOrderDto,
   OrderManagerService,
 } from 'src/order-manager/order-manager.service'
-import { Equity } from 'src/data/data'
-import { Tick } from 'src/live/live'
-import { AppLogger } from 'src/logger/logger.service'
-import { clamp, Throttle } from 'src/utils'
 import { Holding } from 'src/portfolio/holdings/holdings'
-import { Mutex } from 'async-mutex';
+import { PortfolioService } from 'src/portfolio/portfolio.service'
+import { DerivativePosition } from 'src/portfolio/positions/positions'
+import { clamp } from 'src/utils'
 
 type ExecutionContext = {
   equity: Equity
@@ -28,7 +28,7 @@ type ExecutionContext = {
 @Injectable()
 export class StrategyService {
   private readonly tokens: Set<EquityToken | DerivativeToken> = new Set()
-  private processingMutex = new Mutex();
+  private processingMutex = new Mutex()
 
   private readonly context: Map<EquityToken, ExecutionContext> = new Map()
   private currentToken: EquityToken | undefined
@@ -56,11 +56,10 @@ export class StrategyService {
     this.liveService.subscribe(Array.from(this.tokens))
   }
 
-  // @Throttle(30_000)
   @OnEvent(LiveService.Events.Ticks)
+  // @Throttle(30_000)
   private async onPriceUpdate(ticks: Tick[]) {
-
-    const release = await this.processingMutex.acquire();
+    const release = await this.processingMutex.acquire()
 
     for (const tick of ticks) {
       if (!this.tokens.has(tick.token)) {
@@ -68,55 +67,53 @@ export class StrategyService {
       }
 
       this.updateCurrentToken(tick.token)
-      const decision = await this.execute(tick);
-      if(decision) {
+      const decision = await this.execute(tick)
+      if (decision) {
         break
       }
     }
 
-    release();
+    release()
   }
 
-  private execute = async ({ price }: Tick) => {
-    let decisionMade = false;
-    
+  private execute = async ({ price, token }: Tick) => {
+    let decisionMade = false
+
     if (this.DECISION_CESellExists()) {
       if (this.DECISION_CESelltargetHit(price)) {
-        this.logger.log(`Call sell target HIT @${price}`)
+        this.logger.log(
+          `Call sell target HIT for ${token}@${price}, squaring off call sell`,
+        )
+        this.logger.log(`Current context:`, this.context.get(token))
         await this.ACTION_ExitCESell(price)
         await this.resync(false, true, true)
-        await this.ledgerService.syncLedger()
-        this.updateStrategyContext()
-        decisionMade = true;
+        decisionMade = true
       }
     } else {
       if (this.DECISION_EnoughDaysToSellCE(price)) {
-        this.logger.log(`Can sell call @${price}`)
+        this.logger.log(`Can sell call for ${token}@${price}`)
+        this.logger.log(`Current context:`, this.context.get(token))
         await this.ACTION_SellCE(price)
         await this.resync(false, true, true)
-        await this.ledgerService.syncLedger()
-        this.updateStrategyContext()
-        decisionMade = true;
+        decisionMade = true
 
         if (this.DECISION_ShouldSellEquity(price)) {
-          this.logger.log(`Can sell equities @${price}`)
+          this.logger.log(`Can sell equities for ${token}@${price}`)
+          this.logger.log(`Current context:`, this.context.get(token))
           await this.ACTION_SellEquity(price)
           await this.resync(true, false, true)
-          await this.ledgerService.syncLedger()
-          this.updateStrategyContext()
-          decisionMade = true;
+          decisionMade = true
         }
       } else if (this.DECISION_ShouldSellEquity(price)) {
-        this.logger.log(`Can sell equities @${price}`)
+        this.logger.log(`Can sell equities for ${token}@${price}`)
+        this.logger.log(`Current context:`, this.context.get(token))
         await this.ACTION_SellEquity(price)
         await this.resync(true, false, true)
-        await this.ledgerService.syncLedger()
-        this.updateStrategyContext()
-        decisionMade = true;
+        decisionMade = true
       }
     }
-    
-    return decisionMade;
+
+    return decisionMade
   }
 
   // DECISION BLOCKS ---------------------------------- //
@@ -188,7 +185,7 @@ export class StrategyService {
 
   // ACTION BLOCKS ---------------------------------- //
   private ACTION_SellCE = async (equityCmp: number) => {
-    this.logger.log(`ACTION: sell call`)
+    this.logger.debug(`ACTION: sell call`)
     const context = this.context.get(this.currentToken)
 
     const availableOTMCallOption = DataService.getAvailableOTMCallOptionFor(
@@ -198,7 +195,7 @@ export class StrategyService {
     )
 
     if (!availableOTMCallOption) {
-      this.logger.warn(
+      this.logger.error(
         `No OTM call options to sell for equity: ${this.currentToken} and for CMP: ${equityCmp}`,
       )
       return true
@@ -210,7 +207,7 @@ export class StrategyService {
 
     const currentMonth = DataService.getToday().month
 
-    this.logger.log(`Building new order to sell call`)
+    this.logger.debug(`Building new order to sell call`)
 
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: availableOTMCallOption.tradingsymbol,
@@ -220,17 +217,17 @@ export class StrategyService {
       tag: `${context.equity.tradingsymbol}_${currentMonth}_CESELL`,
     }
 
-    this.logger.log(`Sending new order to order manager:`, newOrder)
+    this.logger.debug(`Sending new order to order manager:`, newOrder)
 
     await this.orderManagerService.execute([newOrder])
   }
 
   private ACTION_ExitCESell = async (equityCmp: number) => {
-    this.logger.log(`ACTION: exit existing call sell position`)
+    this.logger.debug(`ACTION: exit existing call sell position`)
     const context = this.context.get(this.currentToken)
 
     if (!context.existingCallOption) {
-      this.logger.warn(`No existing call option found, why trying to exit it?`)
+      this.logger.error(`No existing call option found, why trying to exit it?`)
       return
     }
 
@@ -240,8 +237,8 @@ export class StrategyService {
 
     const currentMonth = DataService.getToday().month
 
-    this.logger.log(`Building new order to exit existing call sell`)
-    
+    this.logger.debug(`Building new order to exit existing call sell`)
+
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: context.existingCallOption.tradingsymbol,
       price: ltpRecord[context.existingCallOption.tradingsymbol].price,
@@ -250,13 +247,13 @@ export class StrategyService {
       tag: `${context.equity.tradingsymbol}_${currentMonth}_SQOFF`,
     }
 
-    this.logger.log(`Sending new order to order manager:`, newOrder)
+    this.logger.debug(`Sending new order to order manager:`, newOrder)
 
     await this.orderManagerService.execute([newOrder])
   }
 
   private ACTION_SellEquity = async (equityCmp: number) => {
-    this.logger.log(`ACTION: sell equity`)
+    this.logger.debug(`ACTION: sell equity`)
     const context = this.context.get(this.currentToken)
 
     const currentMonth = DataService.getToday().month
@@ -273,13 +270,13 @@ export class StrategyService {
     )
 
     if (targetQuantity === 0) {
-      this.logger.warn(
+      this.logger.error(
         `Don't have enough stocks to sell for ${this.currentToken}, existing quantity: ${context.existingStocksQuantity}, need to sell: ${targetQuantity}`,
       )
       return
     }
 
-    this.logger.log(`Building new order sell equities`)
+    this.logger.debug(`Building new order sell equities`)
 
     const newOrder: ExecuteOrderDto = {
       tradingsymbol: context.equity.tradingsymbol,
@@ -289,18 +286,24 @@ export class StrategyService {
       tag: `${context.equity.tradingsymbol}_${currentMonth}_EQSELL`,
     }
 
-    this.logger.log(`Sending new order to order manager:`, newOrder)
+    this.logger.debug(`Sending new order to order manager:`, newOrder)
 
     await this.orderManagerService.execute([newOrder])
   }
   // ---------------------------------- ACTION BLOCKS //
 
-  private resync = async (holdings, positions, balance) => {
+  private resync = async (
+    holdings: boolean,
+    positions: boolean,
+    balance: boolean,
+  ) => {
     await this.portfolioService.syncPortfolio({
       syncBalance: balance,
       syncPositions: positions,
       syncHoldings: holdings,
     })
+    await this.ledgerService.syncLedger()
+    this.updateStrategyContext()
   }
 
   private updateCurrentToken = (token: Token) => {

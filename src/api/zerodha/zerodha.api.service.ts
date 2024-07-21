@@ -11,7 +11,8 @@ import { PositionsMapper } from 'src/portfolio/positions/positions.zerodha.mappe
 import { QuotesMapper } from 'src/strategy/quotes.zerodha.mapper'
 import { ApiService } from '../api.service'
 import { LiveMapper } from 'src/live/live.zerodha.mapper'
-import { ZTick, ZOrderUpdate } from './types'
+import { ZOrderUpdate } from 'src/types/thirdparty/order-update'
+import { ZTick } from 'src/types/thirdparty/tick'
 
 @Injectable()
 export class ZerodhaApiService implements ApiService {
@@ -43,7 +44,7 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
-  initializeTicker(accessToken, apiKey: string) {
+  initializeTicker(accessToken: string, apiKey: string) {
     try {
       this.ticker = new KiteTicker({
         api_key: apiKey,
@@ -68,7 +69,7 @@ export class ZerodhaApiService implements ApiService {
       this.logger.debug(`cancel order:`, orderId)
       const cancelledOrder = await this.kc.cancelOrder('regular', orderId)
       return {
-        brokerOrderId: cancelledOrder.order_id
+        brokerOrderId: cancelledOrder.order_id,
       }
     } catch (error) {
       this.logger.error('Error canceling order', error)
@@ -90,7 +91,6 @@ export class ZerodhaApiService implements ApiService {
 
   placeOrder = async ({ tradingsymbol, buyOrSell, quantity, price, tag }) => {
     try {
-
       let exchange, product
 
       if (
@@ -119,7 +119,7 @@ export class ZerodhaApiService implements ApiService {
       //@ts-expect-error orderType expected by kc is specific string, provided is a string
       const placedOrder = await this.kc.placeOrder('regular', order)
       return {
-        brokerOrderId: placedOrder.order_id
+        brokerOrderId: placedOrder.order_id,
       }
     } catch (error) {
       this.logger.error('Error placing order', error)
@@ -127,10 +127,10 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
-  getOrders = async () => {
+  getTodaysOrders = async () => {
     try {
       const zOrders = await this.kc.getOrders()
-      const orders = zOrders.map(OrdersMapper.toDomain)
+      const orders = zOrders.map(OrdersMapper.Orders.toDomain)
       return orders
     } catch (error) {
       this.logger.error('Error getting orders', error)
@@ -138,17 +138,36 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
-  modifyOrderPrice = async ({
-    orderId,
-    price,
-  }) => {
+  getOrderHistory = async ({ brokerOrderId }) => {
+    try {
+      const zOrderHistory = await this.kc.getOrderHistory(brokerOrderId)
+      const orderHistory = zOrderHistory.map(OrdersMapper.OrderHistory.toDomain)
+      return orderHistory
+    } catch (error) {
+      this.logger.error('Error getting order history', error)
+      throw error
+    }
+  }
+
+  getOrderTrades = async ({ brokerOrderId }) => {
+    try {
+      const zOrderTrades = await this.kc.getOrderTrades(brokerOrderId)
+      const OrderTrades = zOrderTrades.map(OrdersMapper.Trade.toDomain)
+      return OrderTrades
+    } catch (error) {
+      this.logger.error('Error getting order trades', error)
+      throw error
+    }
+  }
+
+  modifyOrderPrice = async ({ orderId, price }) => {
     try {
       this.logger.debug(`modify order:`, orderId)
       const modifiedOrder = await this.kc.modifyOrder('regular', orderId, {
         price,
       })
       return {
-        brokerOrderId: modifiedOrder.order_id
+        brokerOrderId: modifiedOrder.order_id,
       }
     } catch (error) {
       this.logger.error('Error modifying order price', error)
