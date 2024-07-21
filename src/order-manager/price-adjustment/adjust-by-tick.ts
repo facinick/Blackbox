@@ -14,8 +14,8 @@ class AdjustByTick implements PriceAdjustmentStrategy {
 
     const nextPrice =
       orderRequest.buyOrSell === 'BUY'
-        ? lastPrice + tickSize
-        : lastPrice - tickSize
+        ? lastPrice + tickSize * 2
+        : lastPrice - tickSize * 2
 
     return nextPrice
   }
