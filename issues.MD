@@ -11,6 +11,9 @@ TypeError: this.triggerDisconnect is not a function
     
 [x] order handler has logger not defined, even "this" is not defined
 
+[] organize mock api stuff -> make it modular
+[] strategy service needs to have a structure
+
 PRODUCT_MIS: MIS
 PRODUCT_CNC: CNC
 PRODUCT_NRML: NRML
@@ -74,3 +77,9 @@ requestInstance: function wrap() {
     }
     return fn.apply(thisArg, args);
   }
+
+
+
+from kiteconnect import KiteConnect
+kite = KiteConnect(api_key="qbpvv4bxneh2qv2y")
+kite.set_access_token("ctZ7BDmErmJGGQOnsLaJ4V7HWfT5fY7r")
