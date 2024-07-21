@@ -1,6 +1,7 @@
 import { DataService } from 'src/data/data.service'
 import { Tick, OrderUpdate, OrderStatus } from './live'
-import { ZTick, ZOrderUpdate } from 'src/api/zerodha/types'
+import { ZOrderUpdate } from 'src/types/thirdparty/order-update'
+import { ZTick } from 'src/types/thirdparty/tick'
 
 export const LiveMapper = {
   Tick: {

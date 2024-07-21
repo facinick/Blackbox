@@ -17,15 +17,20 @@ import { AppService } from './app.service'
 @Module({
   imports: [
     AppLoggerModule,
-    ConfigModule.forRoot({ 
-      isGlobal: true, 
+    ConfigModule.forRoot({
+      isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
     EventEmitterModule.forRoot(),
     PrismaModule,
     ApiModule.forRoot({
-      environment: process.env.NODE_ENV === 'development' ? 'development' : process.env.NODE_ENV === 'production' ? 'production' : 'development',
-      broker: 'zerodha'
+      environment:
+        process.env.NODE_ENV === 'development'
+          ? 'development'
+          : process.env.NODE_ENV === 'production'
+            ? 'production'
+            : 'development',
+      broker: 'zerodha',
     }),
     LiveModule,
     DataModule,

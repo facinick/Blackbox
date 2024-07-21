@@ -7,18 +7,18 @@ import { ApiService } from '../api.service'
 import { balance, holdings, instruments, netPositions } from './data'
 import { OrdersMapper } from 'src/order-manager/order.zerodha.mapper'
 import { KiteConnect } from 'kiteconnect'
-import { ZOrderUpdate, ZTick } from '../zerodha/types'
 import { LiveMapper } from 'src/live/live.zerodha.mapper'
 import { NseTicker } from './NseTicker'
 import { AppLogger } from 'src/logger/logger.service'
 import * as path from 'path'
 import { DataService } from 'src/data/data.service'
+import { ZTick } from 'src/types/thirdparty/tick'
+import { ZOrderUpdate } from 'src/types/thirdparty/order-update'
 
 const getFakeBrokerId = () => (Math.random() * 1000).toFixed(0)
 
 @Injectable()
 export class MockApiService implements ApiService {
-
   tickListeners: Set<(ticks: Tick[]) => void> = new Set()
   orderUpdateListeners: Set<(update: OrderUpdate) => void> = new Set()
   wsConnectListeners: Set<() => void> = new Set()
@@ -38,15 +38,13 @@ export class MockApiService implements ApiService {
   // null or a non-zero number in case of an ongoing interval
   tickerIntervalId: NodeJS.Timeout = null
 
-  constructor(
-    private readonly logger: AppLogger
-  ) {
+  constructor(private readonly logger: AppLogger) {
     this.logger.setContext(this.constructor.name)
   }
 
   initialize = async (...args: any) => {
     this.logger.log(`initializing mock api service`)
-    this.ticker = new NseTicker(path.join(process.cwd(), 'historical_data'));
+    this.ticker = new NseTicker(path.join(process.cwd(), 'historical_data'))
     await this.ticker.initialize()
     this.logger.log(`ticker initialized`)
     return
@@ -65,10 +63,11 @@ export class MockApiService implements ApiService {
   }
 
   placeOrder = async ({ tradingsymbol, buyOrSell, quantity, price, tag }) => {
-
     const brokerOrderId = getFakeBrokerId()
-    
-    const instrumentData = instruments.filter((instrument) => instrument.tradingsymbol === tradingsymbol)[0]
+
+    const instrumentData = instruments.filter(
+      (instrument) => instrument.tradingsymbol === tradingsymbol,
+    )[0]
 
     const zOrder = {
       order_id: brokerOrderId,
@@ -101,7 +100,7 @@ export class MockApiService implements ApiService {
       status_message_raw: '',
       meta: '',
       guid: '',
-      market_protection: 0
+      market_protection: 0,
     }
 
     this.zOrders.push(zOrder)
@@ -114,49 +113,52 @@ export class MockApiService implements ApiService {
       checksum: '',
     })
 
-    setTimeout(()=> this.markOpenOrdersComplete(), 9_000)
+    setTimeout(() => this.markOpenOrdersComplete(), 9_000)
 
     this.logger.debug(`Placed order with id:${brokerOrderId}`)
 
     return {
-      brokerOrderId
+      brokerOrderId,
     }
   }
 
   // -1600 @ rs 10
   // +1600 @ rs 09
 
-
   markOpenOrdersComplete = () => {
     this.zOrders.forEach((zOrder) => {
-      if (zOrder.status === "OPEN") {
-        zOrder.status = "COMPLETE"
+      if (zOrder.status === 'OPEN') {
+        zOrder.status = 'COMPLETE'
         zOrder.filled_quantity = zOrder.quantity
         zOrder.average_price = zOrder.price
         zOrder.pending_quantity = 0
 
         // update positions
-        if(zOrder.exchange === 'NFO') {
-
+        if (zOrder.exchange === 'NFO') {
           let existingPosition: boolean = false
           this.positions.forEach((position) => {
-            if(position.token === zOrder.instrument_token) {
+            if (position.token === zOrder.instrument_token) {
               existingPosition = true
-              if(zOrder.transaction_type === 'BUY') {
-                const totalQuantity = position.quantity + zOrder.quantity;
-                const totalValue = (position.averagePrice * position.quantity) + (zOrder.price * zOrder.quantity);
+              if (zOrder.transaction_type === 'BUY') {
+                const totalQuantity = position.quantity + zOrder.quantity
+                const totalValue =
+                  position.averagePrice * position.quantity +
+                  zOrder.price * zOrder.quantity
 
-                position.quantity = totalQuantity;
-                position.averagePrice = totalQuantity === 0 ? 0 : totalValue / totalQuantity;
+                position.quantity = totalQuantity
+                position.averagePrice =
+                  totalQuantity === 0 ? 0 : totalValue / totalQuantity
 
                 this.logger.log(`new avg price: ${position.averagePrice}`)
-
               } else {
-                const totalQuantity = position.quantity - zOrder.quantity;
-                const totalValue = (position.averagePrice * position.quantity) - (zOrder.price * zOrder.quantity);
-                
-                position.quantity = totalQuantity;
-                position.averagePrice = totalQuantity === 0 ? 0 : totalValue / totalQuantity;
+                const totalQuantity = position.quantity - zOrder.quantity
+                const totalValue =
+                  position.averagePrice * position.quantity -
+                  zOrder.price * zOrder.quantity
+
+                position.quantity = totalQuantity
+                position.averagePrice =
+                  totalQuantity === 0 ? 0 : totalValue / totalQuantity
 
                 this.logger.log(`new avg price: ${position.averagePrice}`)
               }
@@ -164,31 +166,35 @@ export class MockApiService implements ApiService {
           })
 
           // if wasn't an existing position, that means it wasn't updated. so lets add this position
-          if(!existingPosition) {
+          if (!existingPosition) {
             this.positions.push({
               tradingsymbol: zOrder.tradingsymbol,
               token: zOrder.instrument_token,
               quantity: zOrder.quantity,
               averagePrice: zOrder.price,
               exchange: 'NFO',
-              product: 'NRML'
+              product: 'NRML',
             })
           }
-        } 
+        }
         // update holdings
         else {
           this.holdings.forEach((holding) => {
-            if(holding.token === zOrder.instrument_token) {
-              if(zOrder.transaction_type === 'BUY') {
-                const totalQuantity = holding.quantity + zOrder.quantity;
-                const totalValue = (holding.averagePrice * holding.quantity) + (zOrder.average_price * zOrder.quantity);
-                holding.quantity = totalQuantity;
-                holding.averagePrice = totalValue / totalQuantity;
+            if (holding.token === zOrder.instrument_token) {
+              if (zOrder.transaction_type === 'BUY') {
+                const totalQuantity = holding.quantity + zOrder.quantity
+                const totalValue =
+                  holding.averagePrice * holding.quantity +
+                  zOrder.average_price * zOrder.quantity
+                holding.quantity = totalQuantity
+                holding.averagePrice = totalValue / totalQuantity
               } else {
-                const totalQuantity = holding.quantity - zOrder.quantity;
-                const totalValue = (holding.averagePrice * holding.quantity) - (zOrder.average_price * zOrder.quantity);
-                holding.quantity = totalQuantity;
-                holding.averagePrice = totalValue / totalQuantity;
+                const totalQuantity = holding.quantity - zOrder.quantity
+                const totalValue =
+                  holding.averagePrice * holding.quantity -
+                  zOrder.average_price * zOrder.quantity
+                holding.quantity = totalQuantity
+                holding.averagePrice = totalValue / totalQuantity
               }
             }
           })
@@ -204,13 +210,13 @@ export class MockApiService implements ApiService {
 
         this.logger.debug(`Completed order with id:${zOrder.order_id}`)
       }
-    });
+    })
   }
 
-  markOpenOrdersRejected= () => {
+  markOpenOrdersRejected = () => {
     this.zOrders.forEach((zOrder) => {
-      if (zOrder.status === "OPEN") {
-        zOrder.status = "REJECTED"
+      if (zOrder.status === 'OPEN') {
+        zOrder.status = 'REJECTED'
 
         this._onOrderUpdate({
           ...zOrder,
@@ -219,16 +225,18 @@ export class MockApiService implements ApiService {
           app_id: 0,
           checksum: '',
         })
-    
+
         this.logger.debug(`Rejected order with id:${zOrder.order_id}`)
       }
-    });
+    })
   }
 
   modifyOrderPrice = async ({ orderId, price }) => {
-    const orderIndex = this.zOrders.findIndex(order => order.order_id === orderId);
-    
-    this.zOrders[orderIndex].status = "UPDATE";
+    const orderIndex = this.zOrders.findIndex(
+      (order) => order.order_id === orderId,
+    )
+
+    this.zOrders[orderIndex].status = 'UPDATE'
     this.zOrders[orderIndex].price = price
 
     this._onOrderUpdate({
@@ -241,15 +249,18 @@ export class MockApiService implements ApiService {
 
     this.logger.debug(`Modified order with id:${orderId}`)
     return {
-      brokerOrderId: orderId
+      brokerOrderId: orderId,
     }
   }
-  
+
   cancelOrder = async ({ orderId }) => {
-    const orderIndex = this.zOrders.findIndex(order => order.order_id === orderId);
-    
-    this.zOrders[orderIndex].status = "CANCELLED";
-    this.zOrders[orderIndex].cancelled_quantity = this.zOrders[orderIndex].quantity
+    const orderIndex = this.zOrders.findIndex(
+      (order) => order.order_id === orderId,
+    )
+
+    this.zOrders[orderIndex].status = 'CANCELLED'
+    this.zOrders[orderIndex].cancelled_quantity =
+      this.zOrders[orderIndex].quantity
 
     this._onOrderUpdate({
       ...this.zOrders[orderIndex],
@@ -262,12 +273,21 @@ export class MockApiService implements ApiService {
     this.logger.debug(`Cancelled order with id:${orderId}`)
 
     return {
-      brokerOrderId: orderId
+      brokerOrderId: orderId,
     }
   }
-  
-  getOrders = async () => {
-    return this.zOrders.map(OrdersMapper.toDomain)
+
+  getTodaysOrders = async () => {
+    return this.zOrders.map(OrdersMapper.Orders.toDomain)
+  }
+
+  // todo: ???
+  getOrderHistory = async ({ brokerOrderId }) => {
+    return []
+  }
+
+  getOrderTrades = async ({ brokerOrderId }) => {
+    return []
   }
 
   getTradableEquities = async () => {
@@ -278,50 +298,49 @@ export class MockApiService implements ApiService {
     return instruments
   }
 
-  getStockLtp = async (
-    tradingsymbols: Array<EquityTradingsymbol>,
-  ) => {
-
+  getStockLtp = async (tradingsymbols: Array<EquityTradingsymbol>) => {
     const latestTicks = this.ticker.peek()
 
     const ltps: Record<EquityTradingsymbol, Tick> = {}
 
     tradingsymbols.forEach((tradingsymbol) => {
-      const equityInfo = DataService.getEquityInfoFromTradingsymbol(tradingsymbol)
-      const tick = latestTicks.filter((tick) => tick.instrument_token === equityInfo.token)[0]
+      const equityInfo =
+        DataService.getEquityInfoFromTradingsymbol(tradingsymbol)
+      const tick = latestTicks.filter(
+        (tick) => tick.instrument_token === equityInfo.token,
+      )[0]
       ltps[tradingsymbol] = {
         price: tick.last_price,
-        token: tick.instrument_token
+        token: tick.instrument_token,
       }
     })
 
     return ltps
   }
 
-  getDerivativeLtp = async (
-    tradingsymbols: Array<DerivativeTradingsymbol>,
-  ) => {
+  getDerivativeLtp = async (tradingsymbols: Array<DerivativeTradingsymbol>) => {
     const latestTicks = this.ticker.peek()
 
     const ltps: Record<DerivativeTradingsymbol, Tick> = {}
 
     tradingsymbols.forEach((tradingsymbol) => {
-      const equityInfo = DataService.getDerivativeInfoFromTradingSymbol(tradingsymbol)
-      const tick = latestTicks.filter((tick) => tick.instrument_token === equityInfo.token)[0]
+      const equityInfo =
+        DataService.getDerivativeInfoFromTradingSymbol(tradingsymbol)
+      const tick = latestTicks.filter(
+        (tick) => tick.instrument_token === equityInfo.token,
+      )[0]
       ltps[tradingsymbol] = {
         price: tick.last_price,
-        token: tick.instrument_token
+        token: tick.instrument_token,
       }
     })
 
     return ltps
   }
 
-
   subscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
     // this.ticker.subscribe(tokens)
   }
-
 
   unsubscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
     // this.ticker.unsubscribe(tokens)
@@ -340,13 +359,18 @@ export class MockApiService implements ApiService {
   }
 
   connectTicker = () => {
-    const gen = this.ticker.generator('2024-07-01T09:15:00', '2030-07-19T15:30:00');
-    this.logger.log(`ticker ready to generate ticks from 2024-07-01T09:15:00 to 2024-07-19T15:30:00`)
+    const gen = this.ticker.generator(
+      '2024-07-01T09:15:00',
+      '2030-07-19T15:30:00',
+    )
+    this.logger.log(
+      `ticker ready to generate ticks from 2024-07-01T09:15:00 to 2024-07-19T15:30:00`,
+    )
     gen.next().value // to let getLtp work
 
-    this.tickerIntervalId = setInterval(()=> {
+    this.tickerIntervalId = setInterval(() => {
       const ticks = gen.next().value
-      if(ticks && ticks.length > 0) {
+      if (ticks && ticks.length > 0) {
         this._onTick(ticks)
       }
     }, 15_000)

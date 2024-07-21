@@ -391,6 +391,37 @@ export class DataService {
     })
   }
 
+  // public static getInstrumentInfoFromToken = (instrumentToken: Token): Equity | Derivative => {
+  //   if(DataService.derivativesTokenReferenceMap.has(instrumentToken)) {
+  //     return DataService.derivativesTokenReferenceMap.get(instrumentToken)
+  //   }
+
+  //   else if(DataService.equitiesTokenReferenceMap.has(instrumentToken)) {
+  //     return DataService.equitiesTokenReferenceMap.get(instrumentToken)
+  //   }
+
+  //   else {
+  //     throw new Error(`requested token doesn't exist,: ${instrumentToken}`,)
+  //   }
+  // }
+
+  // public static getInstrumentInfoFromTradingsymbol = (tradingymbol: Tradingsymbol): Equity | Derivative => {
+
+  //   //@ts-expect-error tradingymbol could be derivativeTradingSymbol
+  //   if(DataService.derivativesTradingsymbolReferenceMap.has(tradingymbol)) {
+  //         //@ts-expect-error tradingymbol could be derivativeTradingSymbol
+  //     return DataService.derivativesTradingsymbolReferenceMap.get(tradingymbol)
+  //   }
+
+  //   else if(DataService.equitiesTradingSymbolReferenceMap.has(tradingymbol)) {
+  //     return DataService.equitiesTradingSymbolReferenceMap.get(tradingymbol)
+  //   }
+
+  //   else {
+  //     throw new Error(`requested tradingsymbol doesn't exist: ${tradingymbol}`)
+  //   }
+  // }
+
   private static setFilenamesForToday = () => {
     const today = new Date()
     const dateString = `${today.toLocaleString('default', { month: 'short' }).toLowerCase()}${today.getDate()}`

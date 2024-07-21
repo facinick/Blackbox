@@ -11,16 +11,17 @@ export type ApiConfiguration = {
 @Global()
 @Module({})
 export class ApiModule {
-  static forRoot({environment, broker}: ApiConfiguration): DynamicModule {
+  static forRoot({ environment, broker }: ApiConfiguration): DynamicModule {
     return {
       module: ApiModule,
       providers: [
         {
           provide: API_SERVICE,
-          useClass: environment === 'development' ? MockApiService : ZerodhaApiService,
+          useClass:
+            environment === 'development' ? MockApiService : ZerodhaApiService,
         },
       ],
       exports: [API_SERVICE],
-    };
+    }
   }
 }
