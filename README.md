@@ -1,73 +1,32 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+NestJS Backend for Blackbox, a FnO Trading App for Zerodha. (WIP)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+- Modular
+- Trade persistence
+- Strategies
+- Portfolio management
+- Order management
+- Event based
+- Back testing support
+- Live order data
+- Live ticker data
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## What is it supposed to do?
 
-## Description
+<img width="744" alt="Screenshot 2024-08-05 at 4 39 43 AM" src="https://github.com/user-attachments/assets/6e79eb59-d95a-407e-89e8-23fd029c5686">
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Architecture so far
 
-## Installation
+<img width="1276" alt="Screenshot 2024-08-05 at 4 39 53 AM" src="https://github.com/user-attachments/assets/e5c5ad53-acb5-4d3c-8b71-6ce0b00a2597">
 
-```bash
-$ pnpm install
-```
+## Login flow
 
-## Running the app
+<img width="495" alt="Screenshot 2024-07-19 at 11 07 56 AM" src="https://github.com/user-attachments/assets/9f03d4c0-8d7e-40e0-bf09-94f0ebee5b13">
 
-```bash
-# development
-$ pnpm run start
 
-# watch mode
-$ pnpm run start:dev
+## Order fulfilment so far
 
-# production mode
-$ pnpm run start:prod
-```
+<img width="644" alt="Screenshot 2024-08-05 at 4 40 17 AM" src="https://github.com/user-attachments/assets/c4189604-4c43-4935-bd9d-04b7c20dcc04">
 
-## Test
+## Sample strategy
 
-```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
-```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
+<img width="619" alt="Screenshot 2024-08-05 at 4 42 48 AM" src="https://github.com/user-attachments/assets/c4fa4188-4b0c-439f-bdbe-5ab5981a7586">
