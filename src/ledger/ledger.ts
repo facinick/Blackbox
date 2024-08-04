@@ -1,5 +1,5 @@
 type Trade = {
-  id: string
+  brokerOrderId: string
   tradingsymbol: Tradingsymbol
   averagePrice: number
   quantity: number

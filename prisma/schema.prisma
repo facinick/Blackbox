@@ -8,24 +8,35 @@ datasource db {
 }
 
 model User {
-  id             String   @id
-  authTokens     AuthToken[]
+  id         String      @id
+  authTokens AuthToken[]
 }
 
 model AuthToken {
-  id            Int      @id @default(autoincrement())
-  accessToken   String   @unique
-  user          User     @relation(fields: [userId], references: [id])
-  userId        String   @unique
+  id          Int      @id @default(autoincrement())
+  accessToken String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Trade {
-  id             String @id
-  tag            String
-  tradingsymbol  String
-  buyOrSell      String
-  quantity       Int
-  averagePrice   Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  tag           String
+  quantity      Int
+  averagePrice  Float
+  tradingsymbol String
+  buyOrSell     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  brokerOrderId String   @unique
+  id            Int      @id @default(autoincrement())
+}
+
+model RentStrategyLossRecord {
+  id                  Int      @id @default(autoincrement())
+  equityTradingsymbol String   @unique
+  signedLoss          Float    @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

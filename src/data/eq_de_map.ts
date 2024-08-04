@@ -1,5 +1,5 @@
 export const EQ_DE_MAP: Record<EquityTradingsymbol, DerivativeName> = {
-  // TITAN: 'TITAN',
+  TITAN: 'TITAN',
   ITC: 'ITC',
 }
 

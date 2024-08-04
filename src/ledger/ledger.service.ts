@@ -31,6 +31,10 @@ export class LedgersService {
     return this.trades.filter((trade) => trade.tag.startsWith(tag))
   }
 
+  public getTradesContainingTag(tag: string) {
+    return this.trades.filter((trade) => trade.tag.includes(tag))
+  }
+
   // mutation, after this make sure to load ledger again
   public async saveTrade(trade: Trade) {
     await this.storage.saveTrade(trade)

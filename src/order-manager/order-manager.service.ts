@@ -127,7 +127,7 @@ class OrderManagerService {
   }) => {
     if (filledQuantity !== 0 && brokerOrderId !== null) {
       await this.ledgerService.saveTrade({
-        id: brokerOrderId,
+        brokerOrderId: brokerOrderId,
         tradingsymbol: orderRequest.tradingsymbol,
         averagePrice,
         quantity: filledQuantity,

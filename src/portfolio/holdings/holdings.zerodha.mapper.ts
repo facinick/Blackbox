@@ -9,8 +9,17 @@ export const HoldingsMapper = {
 
     const token: EquityToken = zHolding.instrument_token
 
-    const quantity: number =
-      zHolding.authorised_quantity - zHolding.used_quantity + zHolding.quantity
+    // Calculate the number of stocks available for sale
+    const totalQuantity = zHolding.opening_quantity
+
+    const usedQuantity = zHolding.used_quantity
+
+    const collateralQuantity = zHolding.collateral_quantity
+    const authorizedQuantity = zHolding.authorised_quantity
+    
+    const sellableQuantity = totalQuantity - usedQuantity
+
+    const quantity: number = sellableQuantity
 
     const averagePrice: number = zHolding.average_price
 

@@ -5,7 +5,7 @@ import { Trade as PrismaTrade } from '@prisma/client'
 export const LedgerMpper = {
   toDomain(trade: PrismaTrade): Trade {
     return {
-      id: trade.id,
+      brokerOrderId: trade.brokerOrderId,
       tradingsymbol: trade.tradingsymbol as Tradingsymbol,
       averagePrice: trade.averagePrice,
       quantity: trade.quantity,
@@ -13,9 +13,9 @@ export const LedgerMpper = {
       tag: trade.tag,
     }
   },
-  toPersistence(trade: Trade): Omit<PrismaTrade, 'createdAt' | 'updatedAt'> {
+  toPersistence(trade: Trade): Omit<PrismaTrade, 'id' | 'createdAt' | 'updatedAt'> {
     return {
-      id: trade.id,
+      brokerOrderId: trade.brokerOrderId,
       tradingsymbol: trade.tradingsymbol as Tradingsymbol,
       averagePrice: trade.averagePrice,
       quantity: trade.quantity,

@@ -277,6 +277,7 @@ export class MockApiService implements ApiService {
     }
   }
 
+  // todo: ???
   getTodaysOrders = async () => {
     return this.zOrders.map(OrdersMapper.Orders.toDomain)
   }
@@ -286,8 +287,16 @@ export class MockApiService implements ApiService {
     return []
   }
 
+  // assuming order is completed in only one trade
   getOrderTrades = async ({ brokerOrderId }) => {
-    return []
+    return this.zOrders.filter((zOrder) => zOrder.order_id === brokerOrderId).map((zOrder) => {
+      return ({
+        brokerOrderId,
+        brokerTradeId: brokerOrderId,
+        averagePrice: zOrder.average_price,
+        quantity: zOrder.quantity
+      })
+    })
   }
 
   getTradableEquities = async () => {
