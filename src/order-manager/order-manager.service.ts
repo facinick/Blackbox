@@ -5,9 +5,10 @@ import { AppLogger } from 'src/logger/logger.service'
 import { OrderHandler, OrderHandlerEventData } from './order-handler.service'
 import { AdjustByTick } from './price-adjustment/adjust-by-tick'
 import { PriceAdjustmentStrategy } from './price-adjustment/price-adjustment.strategy'
+import { BuyOrSell } from 'src/types/app/entities'
 
 type ExecuteOrderDto = {
-  tradingsymbol: Tradingsymbol
+  tradingsymbol: string
   price: number
   buyOrSell: BuyOrSell
   quantity: number
@@ -16,7 +17,7 @@ type ExecuteOrderDto = {
 
 type OrderRequest = {
   orderManagerOrderId: string
-  tradingsymbol: Tradingsymbol
+  tradingsymbol: string
   price: number
   quantity: number
   buyOrSell: BuyOrSell

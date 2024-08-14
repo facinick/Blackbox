@@ -6,6 +6,8 @@ import { PortfolioService } from './portfolio/portfolio.service'
 import { StrategyService } from './strategy/strategy.service'
 import { AppLogger } from './logger/logger.service'
 import { API_SERVICE, ApiService } from './api/api.service'
+import { OnEvent } from '@nestjs/event-emitter'
+import { AuthService } from './auth/auth.service'
 
 @Injectable()
 export class AppService {
@@ -24,10 +26,6 @@ export class AppService {
 
   async initialize(accessToken: string, apiKey: string) {
     try {
-      await this.apiService.initialize(accessToken, apiKey)
-      this.logger.log(`API service initialised`)
-      await this.dataService.initialize()
-      this.logger.log(`Data service initialised`)
       await this.liveService.initialize()
       this.logger.log(`Live service initialized`)
       await this.portfolioService.initialize()
@@ -40,5 +38,11 @@ export class AppService {
       this.logger.error(`Error initializing app`, error)
       throw error
     }
+  }
+
+  @OnEvent(AuthService.Events.NewSessionGenerated)
+  async handleAppInitialization() {
+    await this.dataService.initialize()
+    this.logger.log(`Data service initialized`)
   }
 }

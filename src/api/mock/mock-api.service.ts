@@ -14,6 +14,8 @@ import * as path from 'path'
 import { DataService } from 'src/data/data.service'
 import { ZTick } from 'src/types/thirdparty/tick'
 import { ZOrderUpdate } from 'src/types/thirdparty/order-update'
+import { Exchange, Product } from 'src/types/app/entities'
+import { OAuthSession } from 'src/auth/auth'
 
 const getFakeBrokerId = () => (Math.random() * 1000).toFixed(0)
 
@@ -41,6 +43,9 @@ export class MockApiService implements ApiService {
   constructor(private readonly logger: AppLogger) {
     this.logger.setContext(this.constructor.name)
   }
+  
+  generateSession: (...args: any) => Promise<OAuthSession>
+  setSessionExpiryHook: (onSessionExpiry: () => void) => void
 
   initialize = async (...args: any) => {
     this.logger.log(`initializing mock api service`)
@@ -50,12 +55,23 @@ export class MockApiService implements ApiService {
     return
   }
 
+  cleanup = async (...args: any) => {
+    return
+  }
+
   getHoldings = async () => {
     return this.holdings
   }
 
   getBalance = async () => {
     return this.balance
+  }
+
+  getPositions = async () => {
+    return {
+      net: this.positions,
+      day: this.positions
+    }
   }
 
   getNetPositions = async () => {
@@ -172,8 +188,9 @@ export class MockApiService implements ApiService {
               token: zOrder.instrument_token,
               quantity: zOrder.quantity,
               averagePrice: zOrder.price,
-              exchange: 'NFO',
-              product: 'NRML',
+              exchange: Exchange.NFO,
+              product: Product.NRML,
+              lastPrice: zOrder.price
             })
           }
         }
@@ -307,51 +324,51 @@ export class MockApiService implements ApiService {
     return instruments
   }
 
-  getStockLtp = async (tradingsymbols: Array<EquityTradingsymbol>) => {
+  getStockLtp = async (tradingsymbols: Array<string>) => {
     const latestTicks = this.ticker.peek()
 
-    const ltps: Record<EquityTradingsymbol, Tick> = {}
+    const ltps: Record<string, Tick> = {}
 
-    tradingsymbols.forEach((tradingsymbol) => {
-      const equityInfo =
-        DataService.getEquityInfoFromTradingsymbol(tradingsymbol)
-      const tick = latestTicks.filter(
-        (tick) => tick.instrument_token === equityInfo.token,
-      )[0]
-      ltps[tradingsymbol] = {
-        price: tick.last_price,
-        token: tick.instrument_token,
-      }
-    })
+    // tradingsymbols.forEach((tradingsymbol) => {
+    //   const equityInfo =
+    //     DataService.getEquityInfoFromTradingsymbol(tradingsymbol)
+    //   const tick = latestTicks.filter(
+    //     (tick) => tick.instrument_token === equityInfo.token,
+    //   )[0]
+    //   ltps[tradingsymbol] = {
+    //     price: tick.last_price,
+    //     token: tick.instrument_token,
+    //   }
+    // })
 
     return ltps
   }
 
-  getDerivativeLtp = async (tradingsymbols: Array<DerivativeTradingsymbol>) => {
+  getDerivativeLtp = async (tradingsymbols: Array<string>) => {
     const latestTicks = this.ticker.peek()
 
-    const ltps: Record<DerivativeTradingsymbol, Tick> = {}
+    const ltps: Record<string, Tick> = {}
 
-    tradingsymbols.forEach((tradingsymbol) => {
-      const equityInfo =
-        DataService.getDerivativeInfoFromTradingSymbol(tradingsymbol)
-      const tick = latestTicks.filter(
-        (tick) => tick.instrument_token === equityInfo.token,
-      )[0]
-      ltps[tradingsymbol] = {
-        price: tick.last_price,
-        token: tick.instrument_token,
-      }
-    })
+    // tradingsymbols.forEach((tradingsymbol) => {
+    //   const equityInfo =
+    //     DataService.getDerivativeInfoFromTradingSymbol(tradingsymbol)
+    //   const tick = latestTicks.filter(
+    //     (tick) => tick.instrument_token === equityInfo.token,
+    //   )[0]
+    //   ltps[tradingsymbol] = {
+    //     price: tick.last_price,
+    //     token: tick.instrument_token,
+    //   }
+    // })
 
     return ltps
   }
 
-  subscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
+  subscribeTicker = (tokens: Array<number>) => {
     // this.ticker.subscribe(tokens)
   }
 
-  unsubscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
+  unsubscribeTicker = (tokens: Array<number>) => {
     // this.ticker.unsubscribe(tokens)
   }
 

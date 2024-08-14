@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common'
 import { HoldingsService } from './holdings/holdings.service'
 import { PositionsService } from './positions/positions.service'
 import { BalancesService } from './balances/balances.service'
-import { getDerivativeNameByEquityTradingsymbol } from 'src/data/eq_de_map'
 import { AppLogger } from 'src/logger/logger.service'
 import { Holding } from './holdings/holdings'
+import { ExpiryMonth, InstrumentType } from 'src/types/app/entities'
 
 @Injectable()
 export class PortfolioService {
@@ -55,7 +55,7 @@ export class PortfolioService {
   getPortfolio = () => {
     return {
       holdings: this.getHoldings(),
-      positions: this.getPositions(),
+      netPositions: this.getNetPositions(),
       balances: this.getBalances(),
     }
   }
@@ -66,7 +66,7 @@ export class PortfolioService {
 
   // todo: can this have more than one element for same trading symbol?
   getHoldingQuantityForEquity = (
-    tradingsymbol: EquityTradingsymbol,
+    tradingsymbol: string,
   ): Holding['quantity'] => {
     const holdings = this.holdingsService
       .getHoldings()
@@ -82,66 +82,11 @@ export class PortfolioService {
     }
   }
 
-  getPositions = () => {
-    return this.positionsService.getPositions()
-  }
-
-  getOpenDerivativePositions = () => {
-    return this.positionsService.getOpenDerivativePositions()
-  }
-
-  getOpenCESellPositionForEquity = (tradingsymbol: EquityTradingsymbol) => {
-    const allPositions = this.getOpenDerivativePositions()
-    const ceSellPositions = allPositions.filter((position) => {
-      if (
-        position.quantity < 0 &&
-        position.instrumentType === 'CE' &&
-        position.name === getDerivativeNameByEquityTradingsymbol(tradingsymbol)
-      ) {
-        return position
-      }
-    })
-
-    if (ceSellPositions.length === 1) {
-      return ceSellPositions[0]
-    } else if (ceSellPositions.length === 0) {
-      return null
-    } else {
-      this.logger.error(
-        `multiple ce sell positions for ${tradingsymbol}`,
-        ceSellPositions,
-      )
-      throw new Error(`multiple holdings for ${tradingsymbol}`)
-    }
+  getNetPositions = () => {
+    return this.positionsService.getNetPositions()
   }
 
   getBalances = () => {
     return this.balanceService.getBalances()
   }
-
-  getCallPositionsForEquityAndMonth = (
-    equityTradingsymbol: EquityTradingsymbol,
-    month: ExpiryMonth,
-  ) => {
-    const positions = []
-    const allPositions = this.getOpenDerivativePositions()
-
-    for (const position of allPositions) {
-      const derivativeName =
-        getDerivativeNameByEquityTradingsymbol(equityTradingsymbol)
-
-      // position is CE, Expiring in month, name is derivativeName
-      if (
-        position.name === derivativeName &&
-        position.expiry.month === month &&
-        position.instrumentType === 'CE'
-      ) {
-        positions.push(position)
-      }
-    }
-    return positions
-  }
-
-  // @OnEvent("order.*")
-  // orderUpdateHandler
 }

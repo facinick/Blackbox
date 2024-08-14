@@ -1,3 +1,5 @@
+import { BuyOrSell, Exchange } from "src/types/app/entities"
+
 export type OrderStatus =
   | 'COMPLETE'
   | 'REJECTED'
@@ -8,8 +10,8 @@ export type OrderStatus =
 export type OrderUpdate = {
   brokerOrderId: string
   status: OrderStatus
-  tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol
-  token: EquityToken | DerivativeToken
+  tradingsymbol: string
+  token: number
   buyOrSell: BuyOrSell
   quantity: number
   pendingQuantity: number
@@ -18,8 +20,6 @@ export type OrderUpdate = {
   cancelledQuantity: number
   price: number
   exchange: Exchange
-  segment: Segment
-  instrumentType: InstrumentType
   // only in case of complete order
   averagePrice: number
   tag: string

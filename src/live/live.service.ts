@@ -16,7 +16,7 @@ export class LiveService {
     Ticks: 'live.ticks',
   }
 
-  private subscribedTokens: Set<EquityToken | DerivativeToken> = new Set()
+  private subscribedTokens: Set<number> = new Set()
 
   constructor(
     @Inject(API_SERVICE)
@@ -97,7 +97,7 @@ export class LiveService {
     }
   }
 
-  public subscribe = (tokens: (EquityToken | DerivativeToken)[]) => {
+  public subscribe = (tokens: (number)[]) => {
     for (const token of tokens) {
       if (this.subscribedTokens.has(token)) {
         continue
@@ -109,7 +109,7 @@ export class LiveService {
     }
   }
 
-  public unSubscribe = (tokens: (EquityToken | DerivativeToken)[]) => {
+  public unSubscribe = (tokens: (number)[]) => {
     for (const token of tokens) {
       if (this.subscribedTokens.has(token)) {
         this.subscribedTokens.delete(token)

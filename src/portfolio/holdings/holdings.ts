@@ -1,6 +1,6 @@
 type Holding = {
-  tradingsymbol: EquityTradingsymbol
-  token: EquityToken
+  tradingsymbol: string,
+  token: number,
   quantity: number
   averagePrice: number
 }

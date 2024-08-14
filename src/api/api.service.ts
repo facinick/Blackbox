@@ -1,3 +1,4 @@
+import { AuthApiPort } from 'src/auth/auth.api.port'
 import { DataApiPort } from 'src/data/data.api.port'
 import { LiveApiPort } from 'src/live/live.api.port'
 import { OrderApiPort } from 'src/order-manager/order.api.port'
@@ -13,7 +14,8 @@ export interface ApiService
     OrderApiPort,
     DataApiPort,
     LiveApiPort,
-    QuotesApiPort {
+    QuotesApiPort,
+    AuthApiPort {
   initialize: (...args: any) => Promise<void>
 }
 

@@ -1,65 +1,86 @@
-import { KiteConnect } from 'kiteconnect'
-import { Derivative, Equity, Instrument } from './data'
-import { DataService } from './data.service'
+import { z } from 'zod'
+import { Derivative, Equity, Instrument, JSONInstrument } from './data'
 
 export const DataMapper = {
   Equity: {
-    toDomain: (equity: Instrument): Equity => {
-      const token = equity.token as EquityToken
-      const tradingsymbol = equity.tradingsymbol as EquityTradingsymbol
-      const tickSize = equity.tickSize as EquityTickSize
-      const instrumentType = equity.instrumentType as EquityInstrumentType
-      const exchange = equity.exchange as EquityExchange
-      const segment = equity.segment as EquitySegment
+    toDomain: (equity: Instrument): z.infer<typeof Equity> => {
+      const token = equity.token
+      const tradingsymbol = equity.tradingsymbol
+      const tickSize = equity.tickSize
+      const instrumentType = equity.instrumentType
+      const exchange = equity.exchange
 
-      return {
-        token,
-        tradingsymbol,
-        tickSize,
-        instrumentType,
-        exchange,
-        segment,
-        calls: [],
-        puts: [],
-      }
+      return (
+        Equity.parse({
+          token,
+          tradingsymbol,
+          tickSize,
+          instrumentType,
+          exchange,
+          calls: [],
+          puts: [],
+        })
+      )
     },
   },
   Derivative: {
-    toDomain: (derivative: Instrument): Derivative => {
-      const token = derivative.token as DerivativeToken
-      const name = derivative.name as DerivativeName
-      const tradingsymbol = derivative.tradingsymbol as DerivativeTradingsymbol
-      const tradingsymbolParsed = DataService.parseDerivativeTradingSymbol(
-        derivative.tradingsymbol as DerivativeTradingsymbol,
-      )
-      const expiry = String(derivative.expiry) as DerivativeExpiry
-      const expiryParsed = DataService.parseExpiry(
-        String(derivative.expiry),
-      ) as DerivativeExpiryParsed
-      const strike = derivative.strike as StrikePrice
-      const tickSize = derivative.tickSize as DerivativeTickSize
-      const stepSize = 0 // to be calculated while linking
-      const lotSize = derivative.lotSize as DerivativeLotSize
+    toDomain: (instrument: Instrument): z.infer<typeof Derivative> => {
+      const token = instrument.token
+      const name = instrument.name
+      const tradingsymbol = instrument.tradingsymbol
+      const expiry = new Date(instrument.expiry)
+      const strike = instrument.strike
+      const tickSize = instrument.tickSize
+      const lotSize = instrument.lotSize
       const instrumentType =
-        derivative.instrumentType as DerivativeInstrumentType
-      const exchange = derivative.exchange as DerivativeExchange
-      const segment = derivative.segment as DerivativeSegment
+        instrument.instrumentType
+      const exchange = instrument.exchange
 
-      return {
+      return (Derivative.parse({
         token,
         name,
         tradingsymbol,
-        tradingsymbolParsed,
         expiry,
-        stepSize,
-        expiryParsed,
         strike,
         tickSize,
         lotSize,
         instrumentType,
         exchange,
-        segment,
-      }
+      }))
     },
   },
+  Instrument: {
+    fromJson: (instrument: z.infer<typeof JSONInstrument>): Instrument => {
+      const token = instrument.token
+      const name = instrument.name
+      const tradingsymbol = instrument.tradingsymbol
+      const expiry = instrument.expiry ? new Date(instrument.expiry) : null
+      const strike = instrument.strike
+      const tickSize = instrument.tickSize
+      const lotSize = instrument.lotSize
+      const instrumentType = instrument.instrumentType as any // Assuming correct type from enum values
+      const exchange = instrument.exchange as any // Assuming correct type from enum values
+      const lastPrice = instrument.lastPrice
+
+      return ({
+        token,
+        name,
+        tradingsymbol,
+        expiry,
+        strike,
+        tickSize,
+        lotSize,
+        instrumentType,
+        exchange,
+        lastPrice
+      })
+    },
+
+    toJSON: (instrument: Instrument): z.infer<typeof JSONInstrument> => {
+      return JSONInstrument.parse({
+        ...instrument,
+        expiry: instrument.expiry ? instrument.expiry.toISOString() : null
+      })
+    }
+  }
 }

@@ -1,7 +1,8 @@
-import { DataService } from 'src/data/data.service'
 import { Tick, OrderUpdate, OrderStatus } from './live'
 import { ZOrderUpdate } from 'src/types/thirdparty/order-update'
 import { ZTick } from 'src/types/thirdparty/tick'
+import { BuyOrSell, Exchange } from 'src/types/app/entities'
+import { z } from 'zod'
 
 export const LiveMapper = {
   Tick: {
@@ -15,40 +16,19 @@ export const LiveMapper = {
 
   OrderUpdate: {
     toDomain: (zOrderUpdate: ZOrderUpdate): OrderUpdate => {
-      let segment: Segment
-      let instrumentType: InstrumentType
-
-      if (
-        DataService.isCallOption(
-          zOrderUpdate.tradingsymbol as DerivativeTradingsymbol,
-        )
-      ) {
-        ;(segment = 'NFO-OPT'), (instrumentType = 'CE')
-      } else if (
-        DataService.isPutOption(
-          zOrderUpdate.tradingsymbol as DerivativeTradingsymbol,
-        )
-      ) {
-        ;(segment = 'NFO-OPT'), (instrumentType = 'PE')
-      } else {
-        ;(segment = 'NSE'), (instrumentType = 'EQ')
-      }
-
       return {
         brokerOrderId: zOrderUpdate.order_id,
         status: zOrderUpdate.status as OrderStatus,
         tradingsymbol: zOrderUpdate.tradingsymbol,
         token: zOrderUpdate.instrument_token,
-        buyOrSell: zOrderUpdate.transaction_type as BuyOrSell,
+        buyOrSell:  z.nativeEnum(BuyOrSell).parse(zOrderUpdate.transaction_type),
         quantity: zOrderUpdate.quantity,
         pendingQuantity: zOrderUpdate.pending_quantity,
         filledQuantity: zOrderUpdate.filled_quantity,
         cancelledQuantity: zOrderUpdate.cancelled_quantity,
         unfilledQuantity: zOrderUpdate.unfilled_quantity,
         price: zOrderUpdate.price,
-        exchange: zOrderUpdate.exchange as Exchange,
-        segment,
-        instrumentType,
+        exchange: z.nativeEnum(Exchange).parse(zOrderUpdate.exchange),
         // only in case of complete order
         averagePrice: zOrderUpdate.average_price,
         tag: zOrderUpdate.tag,

@@ -1,58 +1,52 @@
-type StrikePrice = number
-type InstrumentType = 'CE' | 'PE' | 'EQ' | 'FUT'
-type Segment = 'NFO-OPT' | 'NSE' | 'BFO-OPT' | 'BSE'
-type Exchange = 'NFO' | 'NSE' | 'BFO' | 'BSE' | 'CDS' | 'BCD' | 'MCX'
-type Product = 'NRML' | 'CNC'
-type ExpiryMonth =
-  | 'JAN'
-  | 'FEB'
-  | 'MAR'
-  | 'APR'
-  | 'MAY'
-  | 'JUN'
-  | 'JUL'
-  | 'AUG'
-  | 'SEP'
-  | 'OCT'
-  | 'NOV'
-  | 'DEC'
-type ExpiryYear = number
-type ExpiryDate = number
-type BuyOrSell = 'BUY' | 'SELL'
-
-// Equities
-type EquityName = string
-type EquityInstrumentType = Extract<InstrumentType, 'EQ'>
-type EquityTradingsymbol = string
-type EquityToken = number
-type EquityTickSize = number
-type EquitySegment = Extract<Segment, 'NSE' | 'BSE'>
-type EquityExchange = Extract<Exchange, 'NSE' | 'BSE'>
-
-// Derivatives
-type DerivativeName = string
-type DerivativeInstrumentType = Extract<InstrumentType, 'CE' | 'PE'>
-type DerivativeTradingsymbol =
-  `${DerivativeName}${ExpiryDate}${ExpiryMonth}${StrikePrice}${DerivativeInstrumentType}`
-type DerivativeTradingsymbolParsed = {
-  date: ExpiryDate
-  month: ExpiryMonth
-  strike: StrikePrice
-  name: DerivativeName
-  instrumentType: DerivativeInstrumentType
+enum InstrumentType {
+  CE = 'CE',
+  PE = 'PE',
+  EQ = 'EQ',
+  FUT = 'FUT',
 }
-type DerivativeToken = number
-type DerivativeExpiry = string
-type DerivativeExpiryParsed = {
-  date: ExpiryDate
-  month: ExpiryMonth
-  year: ExpiryYear
+// enum Segment {
+//   NFO_OPT = 'NFO-OPT',
+//   NSE = 'NSE',
+//   BFO_OPT = 'BFO-OPT',
+//   BSE = 'BSE',
+//   INDEX = 'INDEX'
+// }
+enum Exchange {
+  NFO = 'NFO',
+  NSE = 'NSE',
+  BFO = 'BFO',
+  BSE = 'BSE',
+  CDS = 'CDS',
+  BCD = 'BCD',
+  MCX = 'MCX'
 }
-type DerivativeLotSize = number
-type DerivativeTickSize = number
-type DerivativeStepSize = number
-type DerivativeSegment = Extract<Segment, 'NFO_OPT' | 'BFO_OPT'>
-type DerivativeExchange = Extract<Exchange, 'NFO' | 'BFO'>
+enum Product {
+  NRML = 'NRML',
+  CNC = 'CNC'
+}
+enum ExpiryMonth {
+  JAN = 'JAN',
+  FEB = 'FEB',
+  MAR = 'MAR',
+  APR = 'APR',
+  MAY = 'MAY',
+  JUN = 'JUN',
+  JUL = 'JUL',
+  AUG = 'AUG',
+  SEP = 'SEP',
+  OCT = 'OCT',
+  NOV = 'NOV',
+  DEC = 'DEC',
+}
+enum BuyOrSell {
+  BUY = 'BUY',
+  SELL = 'SELL'
+}
 
-type Tradingsymbol = EquityTradingsymbol | DerivativeTradingsymbol
-type Token = EquityToken | DerivativeToken
+export {
+  InstrumentType,
+  Exchange,
+  Product,
+  ExpiryMonth,
+  BuyOrSell,
+}

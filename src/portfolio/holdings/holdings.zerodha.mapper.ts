@@ -1,13 +1,13 @@
 import { KiteConnect } from 'kiteconnect'
 import { Holding } from './holdings'
-
+import {z} from 'zod'
 export const HoldingsMapper = {
   toDomain: (
     zHolding: Awaited<ReturnType<KiteConnect['getHoldings']>>[number],
   ): Holding => {
-    const tradingsymbol: EquityTradingsymbol = zHolding.tradingsymbol
+    const tradingsymbol = zHolding.tradingsymbol
 
-    const token: EquityToken = zHolding.instrument_token
+    const token = zHolding.instrument_token
 
     // Calculate the number of stocks available for sale
     const totalQuantity = zHolding.opening_quantity

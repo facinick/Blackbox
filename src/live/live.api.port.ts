@@ -6,8 +6,8 @@ interface LiveApiPort {
   isConnected: () => void
   disconnectTicker: () => void
   connectTicker: () => void
-  subscribeTicker: (tokens: Array<DerivativeToken | EquityToken>) => void
-  unsubscribeTicker: (tokens: Array<DerivativeToken | EquityToken>) => void
+  subscribeTicker: (tokens: Array<number>) => void
+  unsubscribeTicker: (tokens: Array<number>) => void
   registerForConnect: (func: () => void) => void
   registerForDisconnect: (func: (error: any) => void) => void
   registerForError: (func: (error: any) => void) => void

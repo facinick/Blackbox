@@ -4,7 +4,7 @@ import { Tick } from 'src/live/live'
 export const QuotesMapper = {
   toDomain: (
     zQuote: Awaited<ReturnType<KiteConnect['getLTP']>>,
-  ): Record<Tradingsymbol, Tick> => {
+  ): Record<string, Tick> => {
     const domainQuotes: Record<string, { price: number; token: number }> = {}
 
     for (const [symbol, data] of Object.entries(zQuote)) {

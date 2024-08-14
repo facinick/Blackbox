@@ -1,4 +1,5 @@
 import { KiteConnect } from 'kiteconnect'
+import { z } from 'zod'
 import { Balance } from './Balances'
 
 export const BalancesMapper = {

@@ -1,7 +1,9 @@
+import { BuyOrSell, Exchange } from "src/types/app/entities"
+
 type Order = {
   brokerOrderId: string
-  tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol
-  token: EquityToken | DerivativeToken
+  tradingsymbol: string
+  token: number
   quantity: number
   price: number
   averagePrice: number
@@ -26,8 +28,8 @@ type GetOrderTrades = {
 
 type OrderHistory = {
   brokerOrderId: string
-  tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol
-  token: EquityToken | DerivativeToken
+  tradingsymbol: string
+  token: number
   quantity: number
   cancelledQuantity: number
   filledQuantity: number
@@ -49,7 +51,7 @@ type GetOrderHistory = {
 
 type PlaceOrder = {
   Request: {
-    tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol
+    tradingsymbol: string
     buyOrSell: BuyOrSell
     quantity: number
     price: number

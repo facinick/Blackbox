@@ -1,5 +1,7 @@
 import { KiteConnect } from 'kiteconnect'
 import { Order, OrderHistory, Trade } from './order'
+import { z } from 'zod'
+import { BuyOrSell, Exchange } from 'src/types/app/entities'
 
 export const OrdersMapper = {
   Orders: {
@@ -18,9 +20,9 @@ export const OrdersMapper = {
 
       const averagePrice = zOrder.average_price
 
-      const buyOrSell = zOrder.transaction_type as BuyOrSell
+      const buyOrSell = z.nativeEnum(BuyOrSell).parse(zOrder.transaction_type)
 
-      const exchange = zOrder.exchange as Exchange
+      const exchange = z.nativeEnum(Exchange).parse(zOrder.exchange)
 
       const tag = zOrder.tag
 

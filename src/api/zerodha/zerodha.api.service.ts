@@ -1,21 +1,53 @@
 import { Injectable } from '@nestjs/common'
+import { EventEmitter2 } from '@nestjs/event-emitter'
 import { KiteConnect, KiteTicker } from 'kiteconnect'
+import { AuthMapper } from 'src/auth/auth.zerodha.mapper'
 import { DataService } from 'src/data/data.service'
 import { InstrumentMapper } from 'src/data/data.zerodha.mapper'
 import { OrderUpdate, Tick } from 'src/live/live'
+import { LiveMapper } from 'src/live/live.zerodha.mapper'
 import { AppLogger } from 'src/logger/logger.service'
 import { OrdersMapper } from 'src/order-manager/order.zerodha.mapper'
 import { BalancesMapper } from 'src/portfolio/balances/balances.zerodha.mapper'
 import { HoldingsMapper } from 'src/portfolio/holdings/holdings.zerodha.mapper'
 import { PositionsMapper } from 'src/portfolio/positions/positions.zerodha.mapper'
 import { QuotesMapper } from 'src/strategy/quotes.zerodha.mapper'
-import { ApiService } from '../api.service'
-import { LiveMapper } from 'src/live/live.zerodha.mapper'
+import { InstrumentType } from 'src/types/app/entities'
 import { ZOrderUpdate } from 'src/types/thirdparty/order-update'
 import { ZTick } from 'src/types/thirdparty/tick'
+import { ApiService } from '../api.service'
 
+enum ZerodhaErrorType {
+  TokenException = 'TokenException',
+  UserException = 'UserException',
+  OrderException = 'OrderException',
+  InputException = 'InputException',
+  MarginException = 'MarginException',
+  HoldingException = 'HoldingException',
+  NetworkException = 'NetworkException',
+  DataException = 'DataException',
+  GeneralException = 'GeneralException',
+}
+interface ZerodhaError extends Error {
+  status: string;
+  message: string;
+  error_type: ZerodhaErrorType;
+}
+
+function isZerodhaError(error: unknown): error is ZerodhaError {
+  return typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    'message' in error &&
+    'error_type' in error;
+}
 @Injectable()
 export class ZerodhaApiService implements ApiService {
+
+  public static Events = {
+    BrokerSessionExpired: 'session.expired',
+  }
+
   private kc: KiteConnect
   private ticker: KiteTicker | undefined
 
@@ -28,18 +60,17 @@ export class ZerodhaApiService implements ApiService {
   private wsReconnectListeners: Set<() => void> = new Set()
   private wsNoreconnectListeners: Set<() => void> = new Set()
 
-  constructor(private readonly logger: AppLogger) {
+  constructor(
+    private readonly logger: AppLogger,
+    private readonly eventEmitter: EventEmitter2,) {
     this.logger.setContext(this.constructor.name)
   }
 
-  initialize = async (accessToken: string, apiKey: string): Promise<void> => {
+  initialize = async (apiKey: string): Promise<void> => {
     try {
       this.kc = new KiteConnect({ api_key: apiKey })
-      this.setAccessToken(accessToken)
-      await this.kc.getProfile()
-      this.initializeTicker(accessToken, apiKey)
-    } catch (error) {
-      this.logger.error('Error initializing KiteConnect', error)
+    } catch (error: unknown) {
+      this.logger.error('Error initializing KiteConnect', error);
       throw error
     }
   }
@@ -77,31 +108,26 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
-  // getProfile = async (): Promise<Profile> => {
-  //   try {
-  //     const profile = await this.kc.getProfile()
-  //     return {
-  //       userId: profile.user_id
-  //     };
-  //   } catch (error) {
-  //     this.logger.error('Error getting profile', error);
-  //     throw error;
-  //   }
-  // }
-
   placeOrder = async ({ tradingsymbol, buyOrSell, quantity, price, tag }) => {
     try {
       let exchange, product
 
-      if (
-        DataService.isCallOption(tradingsymbol as DerivativeTradingsymbol) ||
-        DataService.isPutOption(tradingsymbol as DerivativeTradingsymbol)
-      ) {
+      const instruments = DataService.getInstruments({
+        tradingsymbol,
+      })
+
+      if (instruments.length < 1) {
+        throw new Error(`order you tryna place, we don't have info on it`)
+      }
+
+      if (instruments[0].instrumentType === InstrumentType.EQ) {
+        exchange = 'NSE'
+        product = 'CNC'
+      } else if (instruments[0].instrumentType === InstrumentType.CE || instruments[0].instrumentType === InstrumentType.PE) {
         exchange = 'NFO'
         product = 'NRML'
       } else {
-        exchange = 'NSE'
-        product = 'CNC'
+        throw new Error(`order you tryna place, we don't have info on it`)
       }
 
       const order = {
@@ -187,6 +213,21 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
+  getPositions = async () => {
+    try {
+      const zPositions = await this.kc.getPositions()
+      this.logger.debug(`fetched positions from broker:`, zPositions)
+      const Positions = {
+        net: zPositions.net.map(PositionsMapper.toDomain),
+        day: zPositions.day.map(PositionsMapper.toDomain)
+      }
+      return Positions
+    } catch (error) {
+      this.logger.error('Error getting positions', error)
+      throw error
+    }
+  }
+
   getNetPositions = async () => {
     try {
       const zPositions = await this.kc.getPositions()
@@ -202,7 +243,17 @@ export class ZerodhaApiService implements ApiService {
   getTradableEquities = async () => {
     try {
       const zInstruments = await this.kc.getInstruments('NSE')
-      const instruments = zInstruments.map(InstrumentMapper.toDomain)
+      const instruments = zInstruments.map(instrument => {
+        const mappedInstrument = InstrumentMapper.toDomain(instrument);
+        if (mappedInstrument) {
+          return mappedInstrument;
+        } else {
+          // Handle the case where mapping failed and `mappedInstrument` is null
+          this.logger.error('Mapping failed for instrument', instrument);
+          return null; // Exclude null values from the final array
+        }
+      }).filter(instrument => instrument !== null); // Filter out null values
+
       return instruments
     } catch (error) {
       this.logger.error('Error getting tradable equities', error)
@@ -213,10 +264,20 @@ export class ZerodhaApiService implements ApiService {
   getTradableDerivatives = async () => {
     try {
       const zInstruments = await this.kc.getInstruments('NFO')
-      const instruments = zInstruments.map(InstrumentMapper.toDomain)
+      const instruments = zInstruments.map(instrument => {
+        const mappedInstrument = InstrumentMapper.toDomain(instrument);
+        if (mappedInstrument) {
+          return mappedInstrument;
+        } else {
+          // Handle the case where mapping failed and `mappedInstrument` is null
+          this.logger.error('Mapping failed for instrument', instrument);
+          return null; // Exclude null values from the final array
+        }
+      }).filter(instrument => instrument !== null); // Filter out null values
+
       return instruments
     } catch (error) {
-      this.logger.error('Error getting tradable derivatives', error)
+      this.logger.error('Error getting tradable equities', error)
       throw error
     }
   }
@@ -233,11 +294,69 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
+  getStockLtp = async (tradingsymbols: Array<string>) => {
+    try {
+      const instruments = tradingsymbols.map(
+        (tradingSymbol) => `NSE:${tradingSymbol}`,
+      )
+      const quotes = await this.kc.getLTP(instruments)
+      return QuotesMapper.toDomain(quotes)
+    } catch (error) {
+      this.logger.error('Error getting stock LTP', error)
+      throw error
+    }
+  }
+
+  getDerivativeLtp = async (tradingsymbols: Array<string>) => {
+    try {
+      const instruments = tradingsymbols.map(
+        (tradingSymbol) => `NFO:${tradingSymbol}`,
+      )
+      const quotes = await this.kc.getLTP(instruments)
+      return QuotesMapper.toDomain(quotes)
+    } catch (error) {
+      this.logger.error('Error getting derivative LTP', error)
+      throw error
+    }
+  }
+
+  // getLtp = async (tradingsymbol: string | string, => )
+
+  setAccessToken = (access_token: string) => {
+    try {
+      this.kc.setAccessToken(access_token)
+    } catch (error) {
+      this.logger.error('Error setting access token', error)
+      throw error
+    }
+  }
+
+  setSessionExpiryHook = (onSessionExpiry: () => void) => {
+    try {
+      this.logger.debug(`setSessionExpiryHook`)
+      this.kc.setSessionExpiryHook(onSessionExpiry)
+      return
+    } catch (error) {
+      this.logger.error('Error setting session expiry hook', error)
+      throw error
+    }
+  }
+
   generateSession = async (requestToken: string, api_secret: string) => {
     try {
-      return await this.kc.generateSession(requestToken, api_secret)
+      const session = await this.kc.generateSession(requestToken, api_secret)
+      return AuthMapper.Session.toDomain(session)
     } catch (error) {
       this.logger.error('Error generating session', error)
+      throw error
+    }
+  }
+
+  renewAccessToken = async (refresh_token: string, api_secret: string) => {
+    try {
+      return await this.kc.renewAccessToken(refresh_token, api_secret)
+    } catch (error) {
+      this.logger.error('Error renewing access token', error)
       throw error
     }
   }
@@ -269,52 +388,6 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
-  getStockLtp = async (tradingsymbols: Array<EquityTradingsymbol>) => {
-    try {
-      const instruments = tradingsymbols.map(
-        (tradingSymbol) => `NSE:${tradingSymbol}`,
-      )
-      const quotes = await this.kc.getLTP(instruments)
-      return QuotesMapper.toDomain(quotes)
-    } catch (error) {
-      this.logger.error('Error getting stock LTP', error)
-      throw error
-    }
-  }
-
-  getDerivativeLtp = async (tradingsymbols: Array<DerivativeTradingsymbol>) => {
-    try {
-      const instruments = tradingsymbols.map(
-        (tradingSymbol) => `NFO:${tradingSymbol}`,
-      )
-      const quotes = await this.kc.getLTP(instruments)
-      return QuotesMapper.toDomain(quotes)
-    } catch (error) {
-      this.logger.error('Error getting derivative LTP', error)
-      throw error
-    }
-  }
-
-  // getLtp = async (tradingsymbol: EquityTradingsymbol | DerivativeTradingsymbol, => )
-
-  renewAccessToken = async (refresh_token: string, api_secret: string) => {
-    try {
-      return await this.kc.renewAccessToken(refresh_token, api_secret)
-    } catch (error) {
-      this.logger.error('Error renewing access token', error)
-      throw error
-    }
-  }
-
-  setAccessToken = (access_token: string) => {
-    try {
-      this.kc.setAccessToken(access_token)
-    } catch (error) {
-      this.logger.error('Error setting access token', error)
-      throw error
-    }
-  }
-
   /*
    * Websocket stuff
    */
@@ -328,7 +401,7 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
-  subscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
+  subscribeTicker = (tokens: Array<number>) => {
     try {
       this.ticker.subscribe(tokens)
     } catch (error) {
@@ -337,7 +410,7 @@ export class ZerodhaApiService implements ApiService {
     }
   }
 
-  unsubscribeTicker = (tokens: Array<DerivativeToken | EquityToken>) => {
+  unsubscribeTicker = (tokens: Array<number>) => {
     try {
       this.ticker.unsubscribe(tokens)
     } catch (error) {
