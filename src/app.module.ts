@@ -10,26 +10,37 @@ import { AppController } from './app.controller'
 import { OrderManagerModule } from './order-manager/order-manager.module'
 import { AppLoggerModule } from './logger/logger.module'
 import { ApiModule } from './api/api.module'
-import { TokenService } from './token.service'
 import { PrismaModule } from './prisma/prisma.module'
 import { AppService } from './app.service'
+import { AuthModule } from './auth/auth.module'
+import { UserModule } from './user/user.module'
 
 @Module({
   imports: [
+    // global
     AppLoggerModule,
+    // ConfigModule.forRoot({
+    //   isGlobal: true,
+    //   envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+    // }),
+    EventEmitterModule.forRoot(),
+    // global
+    PrismaModule,
+    // ApiModule.forRoot({
+    //   environment:
+    //     process.env.NODE_ENV === 'development'
+    //       ? 'development'
+    //       : process.env.NODE_ENV === 'production'
+    //         ? 'production'
+    //         : 'development',
+    //   broker: 'zerodha',
+    // }),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      envFilePath: `.env.production`,
     }),
-    EventEmitterModule.forRoot(),
-    PrismaModule,
     ApiModule.forRoot({
-      environment:
-        process.env.NODE_ENV === 'development'
-          ? 'development'
-          : process.env.NODE_ENV === 'production'
-            ? 'production'
-            : 'development',
+      environment: 'production',
       broker: 'zerodha',
     }),
     LiveModule,
@@ -38,8 +49,10 @@ import { AppService } from './app.service'
     OrderManagerModule,
     LedgerModule,
     StrategyModule,
+    AuthModule,
+    UserModule,
   ],
-  providers: [AppService, TokenService],
+  providers: [AppService],
   controllers: [AppController],
 })
 export class AppModule {}
