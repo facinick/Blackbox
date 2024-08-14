@@ -1,25 +1,16 @@
+import { Exchange, Product } from "src/types/app/entities"
+
 type Position = {
-  tradingsymbol: Tradingsymbol
-  token: DerivativeToken
+  tradingsymbol: string
+  token: number
   quantity: number
   averagePrice: number
+  lastPrice: number
   exchange: Exchange
   product: Product
 }
 
-type DerivativePosition = {
-  name: DerivativeName
-  tradingsymbol: DerivativeTradingsymbol
-  token: DerivativeToken
-  quantity: number
-  averagePrice: number
-  buyOrSell: BuyOrSell
-  expiry: DerivativeExpiryParsed
-  instrumentType: DerivativeInstrumentType
-  strike: StrikePrice
-}
-
-export { type Position, type DerivativePosition }
+export { type Position }
 
 // filter by:
 // exchange = NFO | BFO

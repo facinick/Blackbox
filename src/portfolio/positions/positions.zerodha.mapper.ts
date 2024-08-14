@@ -1,5 +1,7 @@
 import { KiteConnect } from 'kiteconnect'
 import { Position } from './Positions'
+import { Exchange, Product } from 'src/types/app/entities'
+import { z } from 'zod'
 
 export const PositionsMapper = {
   toDomain: (
@@ -9,8 +11,9 @@ export const PositionsMapper = {
     const averagePrice = zPosition.average_price
     const quantity = zPosition.quantity
     const token = zPosition.instrument_token
-    const exchange = zPosition.exchange as Exchange // todo: use value objects to verify if its supported exchange
-    const product = zPosition.product as Product
+    const lastPrice = zPosition.last_price
+    const exchange = z.nativeEnum(Exchange).parse(zPosition.exchange)
+    const product = z.nativeEnum(Product).parse(zPosition.product)
 
     return {
       tradingsymbol,
@@ -19,6 +22,7 @@ export const PositionsMapper = {
       token,
       exchange,
       product,
+      lastPrice
     }
   },
 }
