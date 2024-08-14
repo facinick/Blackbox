@@ -1,3 +1,6 @@
+import { promises as fs } from 'fs'
+import { ExpiryMonth } from './types/app/entities'
+
 function containsNumber(str: string) {
   return /\d/.test(str)
 }
@@ -81,6 +84,44 @@ function Throttle(milliseconds: number) {
   }
 }
 
+const writeJsonToFile = async (
+  filePath: string,
+  data: any,
+): Promise<void> => {
+  try {
+    const jsonData = JSON.stringify(data, null, 2)
+    await fs.writeFile(filePath, jsonData, 'utf8')
+  } catch(error) {
+    console.log(error)
+    throw error
+  }
+}
+
+const readJsonFromFile = async (filePath: string): Promise<any> => {
+  try {
+    const data = await fs.readFile(filePath, 'utf8')
+    return JSON.parse(data)
+  } catch(error) {
+    console.log(error)
+    throw error
+  }
+}
+
+const fileExists = async (filePath: string): Promise<boolean> => {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const getMonthAbbreviation = (monthIndex: number): ExpiryMonth => {
+  const date = new Date(2000, monthIndex, 1)
+  const options = { month: 'short' } as const
+  return date.toLocaleString('en-US', options).toUpperCase() as ExpiryMonth
+}
+
 async function sleep(durationMs: number) {
   return new Promise((resolve) => setTimeout(resolve, durationMs))
 }
@@ -99,4 +140,8 @@ export {
   throttle,
   Throttle,
   doNothing,
+  writeJsonToFile,
+  getMonthAbbreviation,
+  readJsonFromFile,
+  fileExists
 }
